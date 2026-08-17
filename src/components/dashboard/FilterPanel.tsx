@@ -27,11 +27,16 @@ export const FilterPanel: React.FC = () => {
     return Array.from(new Set(records.map(r => r.dealOwner?.trim()).filter(Boolean) as string[])).sort();
   }, [records]);
 
+  const locations = useMemo(() => {
+    return Array.from(new Set(records.map(r => r.location?.trim()).filter(Boolean) as string[])).sort();
+  }, [records]);
+
   const isFiltered = Boolean(
     (filters.department && filters.department !== 'all') ||
     (filters.client && filters.client !== 'all') ||
     (filters.status && filters.status !== 'all') ||
-    (filters.ed && filters.ed !== 'all')
+    (filters.ed && filters.ed !== 'all') ||
+    (filters.location && filters.location !== 'all')
   );
 
   return (
@@ -54,7 +59,7 @@ export const FilterPanel: React.FC = () => {
       </div>
 
       {/* Slicers Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-3 items-end">
         {/* Department Slicer */}
         <div>
           <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 font-sans">
@@ -136,6 +141,28 @@ export const FilterPanel: React.FC = () => {
               {eds.map((ed) => (
                 <option key={ed} value={ed}>
                   {ed}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Location Slicer */}
+        <div>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 font-sans">
+            Location
+          </label>
+          <div className="relative">
+            <select
+              value={filters.location || 'all'}
+              onChange={(e) => setFilter('location', e.target.value === 'all' ? null : e.target.value)}
+              className="w-full appearance-none bg-white hover:bg-slate-50/60 border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-2.5 pr-8 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs transition-all cursor-pointer"
+            >
+              <option value="all">All Locations</option>
+              {locations.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
                 </option>
               ))}
             </select>

@@ -237,6 +237,9 @@ export const filterDemandRecords = (records: DemandRecord[], filters: FilterStat
     if (filters.ed && filters.ed !== 'all') {
       if (r.dealOwner?.toLowerCase().trim() !== filters.ed.toLowerCase().trim()) return false;
     }
+    if (filters.location && filters.location !== 'all') {
+      if (r.location?.toLowerCase().trim() !== filters.location.toLowerCase().trim()) return false;
+    }
 
     // Custom Date Range
     if (filters.startDate) {
@@ -348,6 +351,35 @@ export const aggregateIntVsExtDistribution = (records: DemandRecord[]): IntVsExt
     { name: 'Internal', value: Math.round(internalCount), percentage: internalPct, color: '#f97316' },
     { name: 'External', value: Math.round(externalCount), percentage: externalPct, color: '#0284c7' }
   ];
+};
+
+// Location Distribution Aggregator
+export const aggregateLocationDistribution = (records: DemandRecord[]): { name: string; value: number; percentage: number; color: string }[] => {
+  if (!records || records.length === 0) return [];
+
+  const locationCounts: Record<string, number> = {};
+  let total = 0;
+
+  records.forEach((r) => {
+    const loc = (r.location || 'Offshore').trim();
+    const formattedLoc = loc.charAt(0).toUpperCase() + loc.slice(1).toLowerCase();
+    const pos = r.requiredCount || 1;
+    locationCounts[formattedLoc] = (locationCounts[formattedLoc] || 0) + pos;
+    total += pos;
+  });
+
+  const COLORS = ['#6366f1', '#06b6d4', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
+  const sorted = Object.entries(locationCounts).sort((a, b) => b[1] - a[1]);
+
+  return sorted.map(([name, value], idx) => {
+    const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+    return {
+      name,
+      value: Math.round(value),
+      percentage: pct,
+      color: COLORS[idx % COLORS.length]
+    };
+  });
 };
 
 // Client Position Demand Distribution Aggregator (Top 5 + Others grouping)

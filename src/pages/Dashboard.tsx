@@ -17,6 +17,7 @@ import { KpiCard } from '../components/cards/KpiCard';
 import { WowDemandChart } from '../components/charts/WowDemandChart';
 import { IntVsExtPieChart } from '../components/charts/IntVsExtPieChart';
 import { DepartmentPieChart } from '../components/charts/DepartmentPieChart';
+import { LocationPieChart } from '../components/charts/LocationPieChart';
 import { RecentUploadCard } from '../components/cards/RecentUploadCard';
 import { pageVariants, containerStaggerVariants } from '../lib/animations';
 
@@ -29,6 +30,8 @@ export const Dashboard: React.FC = () => {
     wowTrends,
     activeSnapshotIntVsExt,
     activeClientDistribution,
+    activeSnapshotLocation,
+    activeSnapshotRecords,
     setActiveTab
   } = useData();
 
@@ -135,7 +138,7 @@ export const Dashboard: React.FC = () => {
             title="On Hold"
             value={s.latestHoldFTE}
             valueRaw={s.latestHoldFTE}
-            subtitle="Position Status = Hold / Bench"
+            subtitle="Position Status = Hold"
             badge={hasFilteredRecords && holdPct > 0 ? `${holdPct}% of active` : undefined}
             percentage={holdPct}
             icon={PauseCircle}
@@ -168,18 +171,22 @@ export const Dashboard: React.FC = () => {
               </div>
               <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Snapshot Reconciliation</p>
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-600">
-              <span><span className="font-bold text-blue-600">{s.latestOpenFTE}</span> Open</span>
-              <span className="text-slate-300">+</span>
-              <span><span className="font-bold text-sky-600">{s.latestIdentifiedFTE}</span> Identified</span>
-              <span className="text-slate-300">+</span>
-              <span><span className="font-bold text-purple-600">{s.latestHoldFTE}</span> Hold</span>
-              <span className="text-slate-300">=</span>
-              <span className="font-bold text-emerald-600">{s.latestActiveDemandFTE} Active</span>
-              <span className="text-slate-300">·</span>
-              <span><span className="font-bold text-rose-500">{s.latestDroppedFTE}</span> Dropped</span>
-              <span className="text-slate-300">·</span>
-              <span><span className="font-bold text-slate-700">{s.latestTotalFTE}</span> Total Snapshot</span>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span><span className="font-bold text-blue-600">{s.latestOpenFTE}</span> Open</span>
+                <span className="text-slate-300 font-medium">+</span>
+                <span><span className="font-bold text-sky-600">{s.latestIdentifiedFTE}</span> Identified</span>
+                <span className="text-slate-300 font-medium">+</span>
+                <span><span className="font-bold text-purple-600">{s.latestHoldFTE}</span> Hold</span>
+                <span className="text-slate-300 font-medium">=</span>
+                <span className="font-bold text-emerald-600">{s.latestActiveDemandFTE} Active</span>
+              </div>
+              <div className="hidden md:block w-px h-3.5 bg-slate-200" />
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <span><span className="font-bold text-rose-500">{s.latestDroppedFTE}</span> Dropped</span>
+                <span className="text-slate-300 font-medium">·</span>
+                <span><span className="font-bold text-slate-700">{s.latestTotalFTE}</span> Total Snapshot</span>
+              </div>
             </div>
           </motion.div>
         )}
@@ -204,7 +211,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="flex-1 grid grid-cols-3 gap-3">
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Closed / Resolved</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Resolved</span>
               <span className="text-xl font-extrabold text-slate-900">
                 {s.cumulativeClosed}
               </span>
@@ -273,7 +280,7 @@ export const Dashboard: React.FC = () => {
           />
 
           <WowDemandChart
-            title="WoW Closed / Resolved"
+            title="WoW Resolved"
             subtitle="Filled & closed positions by reporting week"
             dataKey="filledDemand"
             data={wowTrends}
@@ -289,10 +296,15 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Client Distribution — active demand only ─────────────────────────── */}
-      <div className="pt-2">
+      {/* ── Client & Location Distributions ─────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
         <DepartmentPieChart
           data={activeClientDistribution}
+          rawRecords={activeSnapshotRecords}
+          snapshotWeek={snapshotWeek}
+        />
+        <LocationPieChart
+          data={activeSnapshotLocation}
           snapshotWeek={snapshotWeek}
         />
       </div>
