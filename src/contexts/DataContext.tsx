@@ -16,6 +16,7 @@ import {
   aggregateWowTrends, 
   aggregateIntVsExtDistribution,
   aggregateClientDistribution,
+  aggregateLocationDistribution,
   getLatestSnapshotRecords,
   getActiveSnapshotRecords
 } from '../utils/excelParser';
@@ -39,6 +40,8 @@ interface DataContextType {
   latestClientDistribution: DepartmentDistributionData[];
   /** Active-demand client distribution (excludes Dropped/Filled) */
   activeClientDistribution: DepartmentDistributionData[];
+  activeSnapshotLocation: { name: string; value: number; percentage: number; color: string }[];
+  activeSnapshotRecords: DemandRecord[];
   filters: FilterState;
   setFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   resetFilters: () => void;
@@ -61,7 +64,8 @@ const INITIAL_FILTERS: FilterState = {
   department: null,
   client: null,
   status: null,
-  ed: null
+  ed: null,
+  location: null
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -177,6 +181,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return aggregateClientDistribution(activeSnapshotRecords);
   }, [activeSnapshotRecords]);
 
+  const activeSnapshotLocation = useMemo(() => {
+    return aggregateLocationDistribution(activeSnapshotRecords);
+  }, [activeSnapshotRecords]);
+
   const processUploadedFile = async (file: File): Promise<{ success: boolean; message?: string }> => {
     try {
       const uploader = user?.displayName || user?.email || 'Analytics Manager';
@@ -213,6 +221,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clientDistribution,
         latestClientDistribution,
         activeClientDistribution,
+        activeSnapshotLocation,
+        activeSnapshotRecords,
         filters,
         setFilter,
         resetFilters,

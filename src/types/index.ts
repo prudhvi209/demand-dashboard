@@ -103,6 +103,7 @@ export interface FilterState {
   client?: string | null;
   status?: string | null;
   ed?: string | null;
+  location?: string | null;
 }
 
 export interface WowTrendPoint {
