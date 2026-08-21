@@ -49,7 +49,7 @@ export const FilterPanel: React.FC = () => {
       <div className="flex items-center gap-2 mb-3.5">
         <Filter className="w-4 h-4 text-blue-600" />
         <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-          Dashboard Filters (Slicers)
+          Positions
         </h3>
         {isFiltered && (
           <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-full ml-auto">
@@ -58,7 +58,7 @@ export const FilterPanel: React.FC = () => {
         )}
       </div>
 
-      {/* Slicers Grid */}
+      {/* Filters Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-3 items-end">
         {/* Department Slicer */}
         <div>

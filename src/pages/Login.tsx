@@ -56,7 +56,7 @@ export const Login: React.FC = () => {
             className="h-11 mx-auto object-contain"
           />
           <p className="text-xs text-slate-500 font-medium">
-            Internal Company Demand & Resource Intelligence
+            Demand Dashboard
           </p>
         </div>
 

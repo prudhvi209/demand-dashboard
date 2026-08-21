@@ -8,7 +8,7 @@ export const Navbar: React.FC = () => {
   const { user } = useAuth();
 
   const titleMap = {
-    dashboard: 'Company Demand Dashboard',
+    dashboard: 'Demand Dashboard',
     upload: 'Upload Excel Spreadsheet',
     profile: 'User Profile & Preferences'
   };
@@ -26,7 +26,7 @@ export const Navbar: React.FC = () => {
             {titleMap[activeTab]}
           </h2>
           <p className="text-xs text-slate-500 font-medium">
-            Agivant Internal Analytics Workspace
+            Agivant Demand Analytics
           </p>
         </div>
       </div>

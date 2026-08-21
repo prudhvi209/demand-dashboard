@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ResponsiveContainer, 
@@ -7,12 +7,14 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  CartesianGrid,
+  CartesianGrid, 
   LabelList 
 } from 'recharts';
 import { cardRevealVariants } from '../../lib/animations';
 import { WowTrendPoint } from '../../types';
 import { FileSpreadsheet } from 'lucide-react';
+import { DateFilterPreset, filterWowTrendsByDatePreset } from '../../utils/dateFilterUtils';
+import { DatePresetFilter } from '../common/DatePresetFilter';
 
 interface WowDemandChartProps {
   title: string;
@@ -21,6 +23,7 @@ interface WowDemandChartProps {
   data?: WowTrendPoint[];
   strokeColor?: string;
   gradientId: string;
+  onPointClick?: (point: WowTrendPoint, title: string, dataKey: keyof Omit<WowTrendPoint, 'week'>) => void;
 }
 
 const CustomTooltip = ({ active, payload, label, title }: any) => {
@@ -30,8 +33,9 @@ const CustomTooltip = ({ active, payload, label, title }: any) => {
         <p className="font-semibold text-slate-500 mb-0.5">{label}</p>
         <div className="flex items-center gap-1.5 font-bold text-slate-900">
           <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: payload[0].stroke }} />
-          <span>{title}: {payload[0].value} FTE</span>
+          <span>{title}: {payload[0].value} positions</span>
         </div>
+        <p className="text-[10px] text-blue-600 font-semibold mt-1">Click point to view records</p>
       </div>
     );
   }
@@ -64,9 +68,27 @@ export const WowDemandChart: React.FC<WowDemandChartProps> = ({
   dataKey,
   data = [],
   strokeColor = '#0284c7',
-  gradientId
+  gradientId,
+  onPointClick
 }) => {
-  const hasData = data && data.length > 0;
+  const [datePreset, setDatePreset] = useState<DateFilterPreset>('all');
+  const [customStart, setCustomStart] = useState<string>('');
+  const [customEnd, setCustomEnd] = useState<string>('');
+
+  const weeks = useMemo(() => data.map(d => d.week), [data]);
+
+  const displayData = useMemo(() => {
+    return filterWowTrendsByDatePreset(data, datePreset, customStart, customEnd);
+  }, [data, datePreset, customStart, customEnd]);
+
+  const hasData = displayData && displayData.length > 0;
+
+  const handleChartClick = (e: any) => {
+    if (onPointClick && e && e.activePayload && e.activePayload.length) {
+      const point = e.activePayload[0].payload as WowTrendPoint;
+      onPointClick(point, title, dataKey);
+    }
+  };
 
   return (
     <motion.div 
@@ -75,15 +97,37 @@ export const WowDemandChart: React.FC<WowDemandChartProps> = ({
       animate="animate"
       className="glass-card rounded-2xl p-5 md:p-6 border border-white/60 flex flex-col justify-between"
     >
-      <div className="mb-3">
-        <h3 className="text-base font-bold text-slate-900 tracking-tight">{title}</h3>
-        <p className="text-xs text-slate-500 font-medium mt-0.5">{subtitle}</p>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 mb-3">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 tracking-tight">{title}</h3>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">{subtitle}</p>
+        </div>
+
+        {/* Date Filter Dropdown for this Chart */}
+        {data.length > 1 && (
+          <DatePresetFilter
+            weeks={weeks}
+            preset={datePreset}
+            customStart={customStart}
+            customEnd={customEnd}
+            onPresetChange={setDatePreset}
+            onCustomChange={(start, end) => {
+              setCustomStart(start);
+              setCustomEnd(end);
+            }}
+          />
+        )}
       </div>
 
       <div className="h-52 w-full flex items-center justify-center">
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 18, right: 15, left: -22, bottom: 0 }}>
+            <LineChart 
+              data={displayData} 
+              margin={{ top: 18, right: 15, left: -22, bottom: 0 }}
+              onClick={handleChartClick}
+              className="cursor-pointer"
+            >
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={strokeColor} stopOpacity={0.15} />
@@ -110,8 +154,25 @@ export const WowDemandChart: React.FC<WowDemandChartProps> = ({
                 dataKey={dataKey} 
                 stroke={strokeColor} 
                 strokeWidth={2.5} 
-                dot={{ r: 4, fill: strokeColor, stroke: '#ffffff', strokeWidth: 1.5 }}
-                activeDot={{ r: 6, fill: strokeColor }}
+                dot={{ 
+                  r: 4.5, 
+                  fill: strokeColor, 
+                  stroke: '#ffffff', 
+                  strokeWidth: 2, 
+                  cursor: 'pointer' 
+                }}
+                activeDot={{ 
+                  r: 6.5, 
+                  fill: strokeColor, 
+                  stroke: '#ffffff', 
+                  strokeWidth: 2, 
+                  cursor: 'pointer',
+                  onClick: (_: any, payload: any) => {
+                    if (onPointClick && payload && payload.payload) {
+                      onPointClick(payload.payload, title, dataKey);
+                    }
+                  }
+                }}
               >
                 <LabelList dataKey={dataKey} content={<SubtleValueLabel />} />
               </Line>
