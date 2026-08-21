@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           <span>{data.name}</span>
         </div>
         <p className="mt-1 text-slate-800 font-bold">
-          {data.value} positions
+          {data.value} FTE
         </p>
       </div>
     );
@@ -74,9 +74,9 @@ export const DepartmentPieChart: React.FC<DepartmentPieChartProps> = ({ data = [
         className="glass-card rounded-2xl p-5 md:p-6 border border-white/60 flex flex-col justify-between h-full"
       >
         <div>
-          <h3 className="text-base font-bold text-slate-900 tracking-tight">Client Distribution</h3>
+          <h3 className="text-base font-bold text-slate-900 tracking-tight">Client Distribution (FTE)</h3>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Share of position demand across top client accounts{snapshotWeek ? ` · ${snapshotWeek}` : ''}
+            Share of headcount required across top client accounts{snapshotWeek ? ` · ${snapshotWeek}` : ''}
           </p>
         </div>
 
@@ -105,7 +105,7 @@ export const DepartmentPieChart: React.FC<DepartmentPieChartProps> = ({ data = [
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-xl font-extrabold text-slate-900 leading-none">{total.toFixed(total % 1 !== 0 ? 2 : 0).replace(/\.?0+$/, '')}</span>
-                  <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-400 mt-1">POSITIONS</span>
+                  <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-400 mt-1">FTE</span>
                 </div>
               </div>
 
@@ -120,7 +120,7 @@ export const DepartmentPieChart: React.FC<DepartmentPieChartProps> = ({ data = [
                         <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
                         <span className="font-semibold text-slate-800 truncate">{item.name}</span>
                       </div>
-                      <span className="font-bold text-slate-700 flex-shrink-0">{item.value} pos</span>
+                      <span className="font-bold text-slate-700 flex-shrink-0">{item.value} FTE</span>
                     </div>
                   ))}
                 </div>
@@ -164,8 +164,8 @@ export const DepartmentPieChart: React.FC<DepartmentPieChartProps> = ({ data = [
               {/* Header */}
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <h4 className="text-base font-bold text-slate-900">Client Role Breakdown</h4>
-                  <p className="text-[11px] text-slate-500 font-medium">All active position roles mapped by client account</p>
+                  <h4 className="text-base font-bold text-slate-900">Client Role & Headcount Breakdown</h4>
+                  <p className="text-[11px] text-slate-500 font-medium">All active headcount required mapped by client account</p>
                 </div>
                 <button 
                   onClick={() => setIsModalOpen(false)}
@@ -183,7 +183,7 @@ export const DepartmentPieChart: React.FC<DepartmentPieChartProps> = ({ data = [
                     <div className="flex items-center justify-between border-b border-slate-200/50 pb-2">
                       <span className="font-bold text-slate-900 text-sm">{client.name}</span>
                       <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
-                        {client.total} {client.total === 1 ? 'position' : 'positions'}
+                        {client.total} FTE Required
                       </span>
                     </div>
                     {/* Roles list */}
@@ -191,7 +191,7 @@ export const DepartmentPieChart: React.FC<DepartmentPieChartProps> = ({ data = [
                       {client.roles.map((role) => (
                         <div key={role.roleName} className="flex items-center justify-between text-xs">
                           <span className="text-slate-600 font-medium">{role.roleName}</span>
-                          <span className="text-slate-400 font-bold">{role.count} {role.count === 1 ? 'role' : 'roles'}</span>
+                          <span className="text-slate-400 font-bold">{role.count} FTE</span>
                         </div>
                       ))}
                     </div>

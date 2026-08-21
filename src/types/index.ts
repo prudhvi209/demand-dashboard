@@ -16,6 +16,7 @@ export interface DemandRecord {
   position: string;
   experienceLevel?: string;
   status: string; // Open, Identified, Offered, Filled, Closed, Dropped, Hold, Bench
+  /** Headcount required / FTE demand for this record */
   requiredCount: number;
   openCount: number;
   closedCount: number;
@@ -47,7 +48,7 @@ export interface AnalyticsSummary {
   lastUpdated: string;
 
   // --- Latest snapshot fields (computed from the most-recent week only) ---
-  /** Total FTE demand in the latest snapshot week */
+  /** Total FTE / Headcount Required in the latest snapshot week */
   latestTotalFTE: number;
   /** Open-status FTE demand in the latest snapshot week */
   latestOpenFTE: number;
@@ -55,7 +56,7 @@ export interface AnalyticsSummary {
   latestIdentifiedFTE: number;
   /** Hold-status FTE demand in the latest snapshot week */
   latestHoldFTE: number;
-  /** Open + Identified + Hold = active (non-dropped) demand */
+  /** Open + Identified + Hold = active (non-dropped) FTE demand */
   latestActiveDemandFTE: number;
   /** Dropped-status FTE demand in the latest snapshot week */
   latestDroppedFTE: number;
@@ -69,11 +70,11 @@ export interface AnalyticsSummary {
   latestSnapshotWeek: string;
 
   // --- Cumulative fields (explicitly aggregated across all weeks) ---
-  /** Sum of closed/filled positions across all snapshot weeks */
+  /** Sum of closed/filled headcount required (FTE) across all snapshot weeks */
   cumulativeClosed: number;
-  /** Sum of dropped positions across all snapshot weeks */
+  /** Sum of dropped headcount required (FTE) across all snapshot weeks */
   cumulativeDropped: number;
-  /** Sum of new positions across all snapshot weeks */
+  /** Sum of new headcount required (FTE) across all snapshot weeks */
   cumulativeNew: number;
 }
 

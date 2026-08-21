@@ -474,11 +474,29 @@ export const parseExcelFile = async (file: File, uploaderName: string = 'prudhvi
             return; // Skip invalid row missing required client/role identity
           }
 
-          const posCount = parseFloat(row['Positions'] || row['Total Positions'] || row['Count'] || row['Headcount'] || '1') || 1;
-          const openCount = parseFloat(row['Open Positions'] || '0');
-          const closedCount = parseFloat(row['Closed Positions'] || '0');
-          const droppedCount = parseFloat(row['Dropped Positions'] || '0');
-          const newCount = parseFloat(row['New Positions'] || '0');
+          const posCount = parseFloat(
+            row['Headcount Required'] ||
+            row['Headcount required'] ||
+            row['headcount required'] ||
+            row['Headcount'] ||
+            row['headcount'] ||
+            row['FTE Required'] ||
+            row['FTE required'] ||
+            row['fte required'] ||
+            row['FTE'] ||
+            row['fte'] ||
+            row['Required Headcount'] ||
+            row['Required FTE'] ||
+            row['Total Headcount'] ||
+            row['Positions'] ||
+            row['Total Positions'] ||
+            row['Count'] ||
+            '1'
+          ) || 1;
+          const openCount = parseFloat(row['Open Positions'] || row['Open FTE'] || row['Open Headcount'] || row['Open'] || '0');
+          const closedCount = parseFloat(row['Closed Positions'] || row['Closed FTE'] || row['Closed Headcount'] || row['Closed'] || row['Filled'] || '0');
+          const droppedCount = parseFloat(row['Dropped Positions'] || row['Dropped FTE'] || row['Dropped Headcount'] || row['Dropped'] || '0');
+          const newCount = parseFloat(row['New Positions'] || row['New FTE'] || row['New Headcount'] || row['New'] || '0');
 
           const rawProb = parseFloat(row['Oppo Prob']);
           const oppoProb = !isNaN(rawProb) ? rawProb : undefined;
@@ -509,7 +527,7 @@ export const parseExcelFile = async (file: File, uploaderName: string = 'prudhvi
         });
 
         if (validRecords.length === 0) {
-          throw new Error("No valid demand position rows could be extracted from this spreadsheet.");
+          throw new Error("No valid demand or headcount required rows could be extracted from this spreadsheet.");
         }
 
         const summary = calculateAnalyticsSummary(validRecords);

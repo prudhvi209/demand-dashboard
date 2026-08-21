@@ -19,7 +19,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           <span>{data.name} Location</span>
         </div>
         <p className="mt-1 text-slate-800 font-bold">
-          {data.value} positions ({data.percentage}%)
+          {data.value} FTE ({data.percentage}%)
         </p>
       </div>
     );
@@ -39,9 +39,9 @@ export const LocationPieChart: React.FC<LocationPieChartProps> = ({ data = [], s
       className="glass-card rounded-2xl p-5 md:p-6 border border-white/60 flex flex-col justify-between h-full min-h-[320px]"
     >
       <div>
-        <h3 className="text-base font-bold text-slate-900 tracking-tight">Demand by Location</h3>
+        <h3 className="text-base font-bold text-slate-900 tracking-tight">Demand by Location (FTE)</h3>
         <p className="text-xs text-slate-500 font-medium mt-0.5">
-          Active demand split by location{snapshotWeek ? ` · ${snapshotWeek}` : ''}
+          Active headcount required split by location{snapshotWeek ? ` · ${snapshotWeek}` : ''}
         </p>
       </div>
 
@@ -71,7 +71,7 @@ export const LocationPieChart: React.FC<LocationPieChartProps> = ({ data = [], s
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-xl font-extrabold text-slate-900 leading-none">{total.toFixed(total % 1 !== 0 ? 2 : 0).replace(/\.?0+$/, '')}</span>
-                <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-400 mt-1">POSITIONS</span>
+                <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-400 mt-1">FTE</span>
               </div>
             </div>
 
@@ -87,7 +87,7 @@ export const LocationPieChart: React.FC<LocationPieChartProps> = ({ data = [], s
                     <span className="text-xs font-bold text-slate-800 truncate">{item.name}</span>
                   </div>
                   <div className="flex items-center justify-between gap-1 mt-0.5">
-                    <span className="text-[11px] font-semibold text-slate-500">{item.value} pos</span>
+                    <span className="text-[11px] font-semibold text-slate-500">{item.value} FTE</span>
                     <span className="px-1.5 py-0.5 rounded-md text-[11px] font-extrabold text-white" style={{ backgroundColor: item.color }}>
                       {item.percentage}%
                     </span>

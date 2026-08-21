@@ -97,14 +97,14 @@ export const Dashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-1 h-4 bg-gradient-to-b from-sky-500 to-blue-600 rounded-full" />
-            <h2 className="text-sm font-bold text-slate-800 tracking-tight">Current Snapshot</h2>
+            <h2 className="text-sm font-bold text-slate-800 tracking-tight">Current Snapshot (FTE)</h2>
             {snapshotWeek && (
               <span className="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                 {snapshotWeek}
               </span>
             )}
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">Based on Position Status</span>
+          <span className="text-[11px] text-slate-400 font-medium">Based on Position Status · Headcount Required</span>
         </div>
 
         {/* 4 KPI cards: Open / Identified / On Hold / Active Demand */}
@@ -113,10 +113,11 @@ export const Dashboard: React.FC = () => {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5"
         >
           <KpiCard
-            title="Open Demand"
+            title="Open FTE"
             value={s.latestOpenFTE}
             valueRaw={s.latestOpenFTE}
-            subtitle="Position Status = Open"
+            unit="FTE"
+            subtitle="Headcount Required · Status = Open"
             badge={hasFilteredRecords && openPct > 0 ? `${openPct}% of active` : undefined}
             percentage={openPct}
             icon={Users}
@@ -124,10 +125,11 @@ export const Dashboard: React.FC = () => {
           />
 
           <KpiCard
-            title="Identified Demand"
+            title="Identified FTE"
             value={s.latestIdentifiedFTE}
             valueRaw={s.latestIdentifiedFTE}
-            subtitle="Position Status = Identified / Offered"
+            unit="FTE"
+            subtitle="Headcount Required · Status = Identified / Offered"
             badge={hasFilteredRecords && identifiedPct > 0 ? `${identifiedPct}% of active` : undefined}
             percentage={identifiedPct}
             icon={UserCheck}
@@ -135,10 +137,11 @@ export const Dashboard: React.FC = () => {
           />
 
           <KpiCard
-            title="On Hold"
+            title="On Hold FTE"
             value={s.latestHoldFTE}
             valueRaw={s.latestHoldFTE}
-            subtitle="Position Status = Hold"
+            unit="FTE"
+            subtitle="Headcount Required · Status = Hold"
             badge={hasFilteredRecords && holdPct > 0 ? `${holdPct}% of active` : undefined}
             percentage={holdPct}
             icon={PauseCircle}
@@ -146,10 +149,11 @@ export const Dashboard: React.FC = () => {
           />
 
           <KpiCard
-            title="Active Demand"
+            title="Active Demand FTE"
             value={s.latestActiveDemandFTE}
             valueRaw={s.latestActiveDemandFTE}
-            subtitle="Open + Identified + Hold"
+            unit="FTE"
+            subtitle="Total Active Headcount Required (Open + Identified + Hold)"
             badge={hasFilteredRecords && s.latestTotalFTE > 0 ? `${Math.round((s.latestActiveDemandFTE / s.latestTotalFTE) * 100)}% of snapshot` : undefined}
             percentage={s.latestTotalFTE > 0 ? Math.round((s.latestActiveDemandFTE / s.latestTotalFTE) * 100) : 0}
             icon={TrendingUp}
@@ -169,23 +173,23 @@ export const Dashboard: React.FC = () => {
               <div className="p-1.5 rounded-lg bg-slate-100 border border-slate-200/60">
                 <XCircle className="w-3.5 h-3.5 text-slate-500" />
               </div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Snapshot Reconciliation</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Snapshot Reconciliation (FTE)</p>
             </div>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span><span className="font-bold text-blue-600">{s.latestOpenFTE}</span> Open</span>
+                <span><span className="font-bold text-blue-600">{s.latestOpenFTE}</span> Open FTE</span>
                 <span className="text-slate-300 font-medium">+</span>
-                <span><span className="font-bold text-sky-600">{s.latestIdentifiedFTE}</span> Identified</span>
+                <span><span className="font-bold text-sky-600">{s.latestIdentifiedFTE}</span> Identified FTE</span>
                 <span className="text-slate-300 font-medium">+</span>
-                <span><span className="font-bold text-purple-600">{s.latestHoldFTE}</span> Hold</span>
+                <span><span className="font-bold text-purple-600">{s.latestHoldFTE}</span> Hold FTE</span>
                 <span className="text-slate-300 font-medium">=</span>
-                <span className="font-bold text-emerald-600">{s.latestActiveDemandFTE} Active</span>
+                <span className="font-bold text-emerald-600">{s.latestActiveDemandFTE} Active FTE</span>
               </div>
               <div className="hidden md:block w-px h-3.5 bg-slate-200" />
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                <span><span className="font-bold text-rose-500">{s.latestDroppedFTE}</span> Dropped</span>
+                <span><span className="font-bold text-rose-500">{s.latestDroppedFTE}</span> Dropped FTE</span>
                 <span className="text-slate-300 font-medium">·</span>
-                <span><span className="font-bold text-slate-700">{s.latestTotalFTE}</span> Total Snapshot</span>
+                <span><span className="font-bold text-slate-700">{s.latestTotalFTE}</span> Total Snapshot FTE</span>
               </div>
             </div>
           </motion.div>
@@ -205,25 +209,25 @@ export const Dashboard: React.FC = () => {
               <BarChart3 className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Cumulative · All Periods</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Sum across all reporting weeks</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Cumulative Headcount (FTE) · All Periods</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Sum of headcount required across all reporting weeks</p>
             </div>
           </div>
           <div className="flex-1 grid grid-cols-3 gap-3">
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Resolved</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Resolved Headcount (FTE)</span>
               <span className="text-xl font-extrabold text-slate-900">
                 {s.cumulativeClosed}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cumulative Dropped</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cumulative Dropped (FTE)</span>
               <span className="text-xl font-extrabold text-slate-900">
                 {s.cumulativeDropped}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cumulative New</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cumulative New (FTE)</span>
               <span className="text-xl font-extrabold text-slate-900">
                 {s.cumulativeNew}
               </span>
@@ -237,15 +241,15 @@ export const Dashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-1 h-4 bg-gradient-to-b from-purple-500 to-indigo-600 rounded-full" />
-            <h2 className="text-sm font-bold text-slate-800 tracking-tight">Week-Over-Week Performance</h2>
+            <h2 className="text-sm font-bold text-slate-800 tracking-tight">Week-Over-Week Performance (FTE)</h2>
           </div>
-          <span className="text-xs text-slate-400 font-medium">Weekly event fields · verified ✓</span>
+          <span className="text-xs text-slate-400 font-medium">Weekly event fields · Headcount Required (FTE) ✓</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <WowDemandChart
-            title="WoW Total Demand"
-            subtitle="Total snapshot position demand by reporting week"
+            title="WoW Total Demand (FTE)"
+            subtitle="Total snapshot headcount required by reporting week"
             dataKey="totalDemand"
             data={wowTrends}
             strokeColor="#0284c7"
@@ -253,8 +257,8 @@ export const Dashboard: React.FC = () => {
           />
 
           <WowDemandChart
-            title="WoW New Demand"
-            subtitle="Newly added positions by week"
+            title="WoW New Demand (FTE)"
+            subtitle="Newly added headcount required by week"
             dataKey="newDemand"
             data={wowTrends}
             strokeColor="#2563eb"
@@ -262,8 +266,8 @@ export const Dashboard: React.FC = () => {
           />
 
           <WowDemandChart
-            title="WoW Dropped Demand"
-            subtitle="Dropped or cancelled positions by week"
+            title="WoW Dropped Demand (FTE)"
+            subtitle="Dropped or cancelled headcount (FTE) by week"
             dataKey="droppedDemand"
             data={wowTrends}
             strokeColor="#ef4444"
@@ -271,8 +275,8 @@ export const Dashboard: React.FC = () => {
           />
 
           <WowDemandChart
-            title="WoW Open Positions (Weekly)"
-            subtitle="Weekly Open Positions field — not current-status open count"
+            title="WoW Open Headcount (Weekly)"
+            subtitle="Weekly Open Headcount field — not current-status open count"
             dataKey="openDemand"
             data={wowTrends}
             strokeColor="#0ea5e9"
@@ -280,8 +284,8 @@ export const Dashboard: React.FC = () => {
           />
 
           <WowDemandChart
-            title="WoW Resolved"
-            subtitle="Filled & closed positions by reporting week"
+            title="WoW Resolved Headcount"
+            subtitle="Filled & closed headcount (FTE) by reporting week"
             dataKey="filledDemand"
             data={wowTrends}
             strokeColor="#10b981"

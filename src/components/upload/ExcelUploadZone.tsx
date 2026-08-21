@@ -125,7 +125,7 @@ export const ExcelUploadZone: React.FC = () => {
           Upload Demand Spreadsheet
         </h2>
         <p className="text-sm text-slate-500 max-w-lg mx-auto font-medium">
-          Drag and drop your company demand workbook. Rows and positions are parsed and stored directly into your Cloud Firestore database.
+          Drag and drop your company demand workbook. FTE and headcount required metrics are parsed and stored directly into your Cloud Firestore database.
         </p>
       </div>
 
@@ -217,7 +217,7 @@ export const ExcelUploadZone: React.FC = () => {
                 </div>
 
                 <p className="text-xs text-slate-400 font-medium pt-1">
-                  Validating sheet rows, mapping position metrics, saving to Cloud Firestore...
+                  Validating sheet rows, mapping FTE & Headcount Required metrics, saving to Cloud Firestore...
                 </p>
               </div>
             </motion.div>

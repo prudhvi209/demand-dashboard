@@ -30,7 +30,7 @@ const CustomTooltip = ({ active, payload, label, title }: any) => {
         <p className="font-semibold text-slate-500 mb-0.5">{label}</p>
         <div className="flex items-center gap-1.5 font-bold text-slate-900">
           <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: payload[0].stroke }} />
-          <span>{title}: {payload[0].value} positions</span>
+          <span>{title}: {payload[0].value} FTE</span>
         </div>
       </div>
     );
