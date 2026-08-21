@@ -21,6 +21,8 @@ export interface DemandRecord {
   closedCount: number;
   droppedCount: number;
   newCount: number;
+  identifiedCount?: number;
+  holdCount?: number;
   location: string;
   internalExternal: string;
   dealOwner?: string;

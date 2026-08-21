@@ -179,19 +179,19 @@ export const Dashboard: React.FC = () => {
     } else if (type === 'open') {
       modalTitle = `Active Demand - Week ${weekIso}`;
       matchingRecords = activeSnapshotRecords.filter(
-        r => r.status === 'Open' || r.status === 'Active' || (r.openCount && r.openCount > 0)
+        r => r.status === 'Open' || r.status === 'Active' || (r.openCount !== undefined && r.openCount > 0)
       );
       if (matchingRecords.length === 0) matchingRecords = activeSnapshotRecords;
     } else if (type === 'identified') {
       modalTitle = `Identified Demand - Week ${weekIso}`;
       matchingRecords = activeSnapshotRecords.filter(
-        r => r.status === 'Identified' || r.status === 'Offered' || (r.status && r.status.toLowerCase().includes('identified')) || (r.identifiedCount && r.identifiedCount > 0)
+        r => r.status === 'Identified' || r.status === 'Offered' || (r.status && r.status.toLowerCase().includes('identified')) || (r.identifiedCount !== undefined && r.identifiedCount > 0)
       );
       if (matchingRecords.length === 0) matchingRecords = activeSnapshotRecords;
     } else if (type === 'hold') {
       modalTitle = `On Hold Demand - Week ${weekIso}`;
       matchingRecords = activeSnapshotRecords.filter(
-        r => r.status === 'Hold' || (r.status && r.status.toLowerCase().includes('hold')) || (r.holdCount && r.holdCount > 0)
+        r => r.status === 'Hold' || (r.status && r.status.toLowerCase().includes('hold')) || (r.holdCount !== undefined && r.holdCount > 0)
       );
       if (matchingRecords.length === 0) matchingRecords = activeSnapshotRecords;
     }
