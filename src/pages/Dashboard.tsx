@@ -20,7 +20,8 @@ import { WowDemandChart } from '../components/charts/WowDemandChart';
 import { IntVsExtPieChart } from '../components/charts/IntVsExtPieChart';
 import { DepartmentPieChart } from '../components/charts/DepartmentPieChart';
 import { LocationPieChart } from '../components/charts/LocationPieChart';
-import { ClientAgeingAnalysis } from '../components/dashboard/ClientAgeingAnalysis';
+import { CompanyAgeingChart } from '../components/charts/CompanyAgeingChart';
+import { AgeingDistributionChart } from '../components/charts/AgeingDistributionChart';
 import { RecentUploadCard } from '../components/cards/RecentUploadCard';
 import { pageVariants, containerStaggerVariants } from '../lib/animations';
 import { DemandRecord, WowTrendPoint, IntVsExtDistributionData } from '../types';
@@ -229,6 +230,16 @@ export const Dashboard: React.FC = () => {
     });
   };
 
+  // Drilldown handler for Ageing duration bucket slices
+  const handleAgeingBucketClick = (bucketName: string, activePool: DemandRecord[]) => {
+    setModalState({
+      isOpen: true,
+      title: `${bucketName} Positions - Week ${formatWeekToIsoDate(s.latestSnapshotWeek)}`,
+      subtitle: `${activePool.length} active records in pipeline.`,
+      records: activePool
+    });
+  };
+
   return (
     <motion.div
       variants={pageVariants}
@@ -409,7 +420,7 @@ export const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <WowDemandChart
             title="WoW Total Demand"
-            subtitle="Total snapshot position demand by reporting week"
+            subtitle="Total snapshot position demand"
             dataKey="totalDemand"
             data={wowTrends}
             strokeColor="#0284c7"
@@ -429,7 +440,7 @@ export const Dashboard: React.FC = () => {
 
           <WowDemandChart
             title="WoW Dropped Demand"
-            subtitle="Dropped or cancelled positions by week"
+            subtitle="Dropped or cancelled positions"
             dataKey="droppedDemand"
             data={wowTrends}
             strokeColor="#ef4444"
@@ -438,8 +449,8 @@ export const Dashboard: React.FC = () => {
           />
 
           <WowDemandChart
-            title="WoW Active Positions (Weekly)"
-            subtitle="Weekly Active Positions field"
+            title="WoW Active Demand"
+            subtitle="Active talent positions by week"
             dataKey="openDemand"
             data={wowTrends}
             strokeColor="#0ea5e9"
@@ -449,7 +460,7 @@ export const Dashboard: React.FC = () => {
 
           <WowDemandChart
             title="WoW Fulfilled"
-            subtitle="Fulfilled positions by reporting week"
+            subtitle="Fulfilled positions by week"
             dataKey="filledDemand"
             data={wowTrends}
             strokeColor="#10b981"
@@ -483,12 +494,30 @@ export const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* ── Company Demand Ageing Analysis ───────────────────────────────────── */}
+      {/* ── Demand Ageing & Pipeline Velocity ───────────────────────────── */}
       {hasRecords && (
-        <ClientAgeingAnalysis
-          records={filteredRecords.length > 0 ? filteredRecords : records}
-          onSelectClient={handleClientClick}
-        />
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 bg-gradient-to-b from-amber-500 to-rose-600 rounded-full" />
+              <h2 className="text-sm font-bold text-slate-800 tracking-tight">Demand Ageing & Pipeline Velocity</h2>
+            </div>
+            <span className="text-xs text-slate-400 font-medium">Click any bar or slice to view records</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CompanyAgeingChart
+              records={filteredRecords.length > 0 ? filteredRecords : records}
+              snapshotWeek={snapshotWeek}
+              onSelectClient={handleClientClick}
+            />
+            <AgeingDistributionChart
+              records={filteredRecords.length > 0 ? filteredRecords : records}
+              snapshotWeek={snapshotWeek}
+              onSelectBucket={handleAgeingBucketClick}
+            />
+          </div>
+        </div>
       )}
 
       <RecentUploadCard
