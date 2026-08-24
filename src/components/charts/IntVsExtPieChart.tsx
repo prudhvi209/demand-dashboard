@@ -81,10 +81,10 @@ export const IntVsExtPieChart: React.FC<IntVsExtPieChartProps> = ({
       animate="animate"
       className="glass-card rounded-2xl p-5 md:p-6 border border-white/60 flex flex-col justify-between h-full min-h-[320px]"
     >
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 mb-2">
-        <div>
-          <h3 className="text-base font-bold text-slate-900 tracking-tight">Internal vs External Demand Mix</h3>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">
+      <div className="flex items-center justify-between gap-2 mb-3 pb-1 border-b border-slate-100/60">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-bold text-slate-900 tracking-tight truncate">Internal vs External Mix</h3>
+          <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">
             {currentPeriodLabel}
           </p>
         </div>
@@ -101,6 +101,7 @@ export const IntVsExtPieChart: React.FC<IntVsExtPieChartProps> = ({
               setCustomStart(start);
               setCustomEnd(end);
             }}
+            compact={true}
           />
         )}
       </div>
