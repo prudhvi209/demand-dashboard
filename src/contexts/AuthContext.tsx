@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile } from '../types';
-import { signInWithGoogle, signInWithEmail, signOutUser, subscribeToAuthChanges } from '../firebase/auth';
+import { signInWithGoogle, signInWithEmail, signOutUser, subscribeToAuthChanges, createUserAccount } from '../firebase/auth';
 
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmailPassword: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  createUser: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -32,8 +33,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error("Google login failed", err);
       throw err;
-    } fontally: () => {
+    } finally {
       setLoading(false);
+    }
+  };
+
+  const createUser = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await createUserAccount(email, pass);
+      return { success: true };
+    } catch (err: any) {
+      console.error('User creation failed', err);
+      const message = err?.code === 'auth/email-already-in-use'
+        ? 'An account already exists for this email.'
+        : err?.code === 'auth/invalid-email'
+          ? 'Invalid email format.'
+          : err?.code === 'auth/weak-password'
+            ? 'Password must be at least 6 characters.'
+            : err?.message || 'Could not create user.';
+      return { success: false, error: message };
     }
   };
 
@@ -67,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithEmailPassword, logout }}>
+    <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithEmailPassword, createUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

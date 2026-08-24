@@ -10,7 +10,8 @@ export const Navbar: React.FC = () => {
   const titleMap = {
     dashboard: 'Demand Dashboard',
     upload: 'Upload Excel Spreadsheet',
-    profile: 'User Profile & Preferences'
+    profile: 'User Profile & Preferences',
+    users: 'Add Users'
   };
 
   const initialLetter = (user?.displayName || user?.email || 'A').charAt(0).toUpperCase();

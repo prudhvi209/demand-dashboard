@@ -6,6 +6,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { UploadPage } from './pages/UploadPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { UsersPage } from './pages/UsersPage';
 import { AnimatePresence } from 'framer-motion';
 
 const MainRouter: React.FC = () => {
@@ -33,6 +34,7 @@ const MainRouter: React.FC = () => {
         {activeTab === 'dashboard' && <Dashboard key="dashboard" />}
         {activeTab === 'upload' && <UploadPage key="upload" />}
         {activeTab === 'profile' && <ProfilePage key="profile" />}
+        {activeTab === 'users' && user.isAdmin && <UsersPage key="users" />}
       </AnimatePresence>
     </AppShell>
   );
