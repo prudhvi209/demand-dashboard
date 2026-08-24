@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, UploadCloud, User, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, UploadCloud, User, UserPlus, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -10,6 +10,9 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'upload' as const, label: 'Upload Excel', icon: UploadCloud },
+    ...(user?.isAdmin
+      ? [{ id: 'users' as const, label: 'Add Users', icon: UserPlus }]
+      : []),
     { id: 'profile' as const, label: 'Profile', icon: User },
   ];
 

@@ -46,8 +46,8 @@ interface DataContextType {
   setFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   resetFilters: () => void;
   loading: boolean;
-  activeTab: 'dashboard' | 'upload' | 'profile';
-  setActiveTab: (tab: 'dashboard' | 'upload' | 'profile') => void;
+  activeTab: 'dashboard' | 'upload' | 'profile' | 'users';
+  setActiveTab: (tab: 'dashboard' | 'upload' | 'profile' | 'users') => void;
   isSidebarCollapsed: boolean;
   setIsSidebarCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   toggleSidebar: () => void;
@@ -104,7 +104,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [recentUploads, setRecentUploads] = useState<UploadHistoryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'upload' | 'profile'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'upload' | 'profile' | 'users'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 

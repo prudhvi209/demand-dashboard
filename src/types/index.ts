@@ -4,6 +4,7 @@ export interface UserProfile {
   email: string | null;
   photoURL: string | null;
   role?: string;
+  isAdmin?: boolean;
   isDemo?: boolean;
 }
 
