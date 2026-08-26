@@ -149,14 +149,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
           )}
         </div>
 
-        <div className={`w-full h-1.5 ${currentTheme.trackBg} rounded-full overflow-hidden mt-3.5 border border-slate-200/40`}>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(100, Math.max(5, percentage !== undefined && percentage > 0 ? percentage : 100))}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className={`h-full bg-gradient-to-r ${currentTheme.progress} rounded-full`}
-          />
-        </div>
+        
       </div>
 
       {subtitle && (

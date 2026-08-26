@@ -303,8 +303,6 @@ export const Dashboard: React.FC = () => {
             title="Total Active Demand"
             value={s.latestActiveDemandFTE}
             valueRaw={s.latestActiveDemandFTE}
-            badge={hasFilteredRecords && s.latestTotalFTE > 0 ? `${Math.round((s.latestActiveDemandFTE / s.latestTotalFTE) * 100)}% of snapshot` : undefined}
-            percentage={s.latestTotalFTE > 0 ? Math.round((s.latestActiveDemandFTE / s.latestTotalFTE) * 100) : 0}
             icon={TrendingUp}
             theme="emerald"
             infoTooltip="Total active demand pipeline (Active + Identified + Hold), excluding dropped."
@@ -315,7 +313,6 @@ export const Dashboard: React.FC = () => {
             title="Active Demand"
             value={s.latestOpenFTE}
             valueRaw={s.latestOpenFTE}
-            badge={hasFilteredRecords && openPct > 0 ? `${openPct}% of active` : undefined}
             percentage={openPct}
             icon={Users}
             theme="blue"
@@ -327,7 +324,6 @@ export const Dashboard: React.FC = () => {
             title="Identified Demand"
             value={s.latestIdentifiedFTE}
             valueRaw={s.latestIdentifiedFTE}
-            badge={hasFilteredRecords && identifiedPct > 0 ? `${identifiedPct}% of active` : undefined}
             percentage={identifiedPct}
             icon={UserCheck}
             theme="sky"
@@ -339,7 +335,6 @@ export const Dashboard: React.FC = () => {
             title="On Hold"
             value={s.latestHoldFTE}
             valueRaw={s.latestHoldFTE}
-            badge={hasFilteredRecords && holdPct > 0 ? `${holdPct}% of active` : undefined}
             percentage={holdPct}
             icon={PauseCircle}
             theme="purple"
@@ -350,7 +345,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* ── SECTION 2: Cumulative Performance Row ────────────────────────────── */}
-      {hasFilteredRecords && (
+      {/* {hasFilteredRecords && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -405,7 +400,7 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         </motion.div>
-      )}
+      )} */}
 
       {/* ── SECTION 3: WoW Charts ─────────────────────────────────────────────── */}
       <div className="space-y-4 pt-2">
@@ -493,32 +488,6 @@ export const Dashboard: React.FC = () => {
           onSelectLocation={handleLocationClick}
         />
       </div>
-
-      {/* ── Demand Ageing & Pipeline Velocity ───────────────────────────── */}
-      {hasRecords && (
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-4 bg-gradient-to-b from-amber-500 to-rose-600 rounded-full" />
-              <h2 className="text-sm font-bold text-slate-800 tracking-tight">Demand Ageing & Pipeline Velocity</h2>
-            </div>
-            <span className="text-xs text-slate-400 font-medium">Click any bar or slice to view records</span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <CompanyAgeingChart
-              records={filteredRecords.length > 0 ? filteredRecords : records}
-              snapshotWeek={snapshotWeek}
-              onSelectClient={handleClientClick}
-            />
-            <AgeingDistributionChart
-              records={filteredRecords.length > 0 ? filteredRecords : records}
-              snapshotWeek={snapshotWeek}
-              onSelectBucket={handleAgeingBucketClick}
-            />
-          </div>
-        </div>
-      )}
 
       <RecentUploadCard
         uploadItem={latestUpload}
