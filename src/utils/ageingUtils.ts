@@ -1,5 +1,6 @@
 import { DemandRecord } from '../types';
 import { parseWeekDate, sortWeeksChronologically } from './dateFilterUtils';
+import { isActiveRecord } from './statusUtils';
 
 export interface ClientAgeingSummary {
   client: string;
@@ -67,9 +68,8 @@ export const calculateAgeingMetrics = (records: DemandRecord[]): AgeingMetrics =
     }
   });
 
-  // Filter for active positions (excluding Dropped, Filled, Closed)
-  const inactiveStatuses = new Set(['Dropped', 'Filled', 'Closed']);
-  const activeRecords = records.filter(r => !inactiveStatuses.has((r.status || '').trim()));
+  // Filter for active positions (strictly excluding Dropped, Filled, Closed)
+  const activeRecords = records.filter(r => isActiveRecord(r));
 
   // Map per client
   const clientMap: Record<string, {

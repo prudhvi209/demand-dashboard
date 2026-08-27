@@ -6,6 +6,7 @@ import { DepartmentDistributionData, DemandRecord } from '../../types';
 import { FileSpreadsheet, X } from 'lucide-react';
 import { aggregateClientDistribution } from '../../utils/excelParser';
 import { DateFilterPreset, filterRecordsByDatePreset, analyzeDatePresets } from '../../utils/dateFilterUtils';
+import { isActiveRecord } from '../../utils/statusUtils';
 import { DatePresetFilter } from '../common/DatePresetFilter';
 
 interface DepartmentPieChartProps {
@@ -37,8 +38,8 @@ const CustomTooltip = ({ active, payload }: any) => {
 export const DepartmentPieChart: React.FC<DepartmentPieChartProps> = ({ 
   data = [], 
   rawRecords = [], 
-  snapshotWeek,
-  onSelectClient
+  snapshotWeek, 
+  onSelectClient 
 }) => {
   const [datePreset, setDatePreset] = useState<DateFilterPreset>('current_week');
   const [customStart, setCustomStart] = useState<string>('');
@@ -52,8 +53,7 @@ export const DepartmentPieChart: React.FC<DepartmentPieChartProps> = ({
 
   const activeFilteredRecords = useMemo(() => {
     if (!rawRecords || rawRecords.length === 0) return [];
-    const inactive = new Set(['Dropped', 'Filled', 'Closed']);
-    const activeRecords = rawRecords.filter(r => !inactive.has((r.status || '').trim()));
+    const activeRecords = rawRecords.filter(r => isActiveRecord(r));
     return filterRecordsByDatePreset(activeRecords, datePreset, customStart, customEnd);
   }, [rawRecords, datePreset, customStart, customEnd]);
 

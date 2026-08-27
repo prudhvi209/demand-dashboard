@@ -2,11 +2,30 @@ import { DemandRecord, WowTrendPoint } from '../types';
 
 export type DateFilterPreset = 'all' | 'current_week' | 'last_week' | 'this_month' | 'last_month' | 'custom';
 
-export const parseWeekDate = (weekStr: string): Date | null => {
-  if (!weekStr) return null;
-  const clean = weekStr.trim();
+export const parseWeekDate = (val: any): Date | null => {
+  if (val === null || val === undefined || val === '') return null;
   
-  // Format "DD-MMM-YY" (e.g. 29-Jul-26) or "DD-MMM-YYYY"
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? null : val;
+  }
+
+  // Handle Excel serial date number
+  if (typeof val === 'number') {
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const clean = String(val).trim();
+  if (!clean) return null;
+
+  // Check if string is a numeric Excel serial
+  if (/^\d{5}(\.\d+)?$/.test(clean)) {
+    const num = parseFloat(clean);
+    const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  
+  // Format "DD-MMM-YY" (e.g. 24-Jun-26) or "DD-MMM-YYYY"
   const dmyMatch = clean.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
   if (dmyMatch) {
     const day = parseInt(dmyMatch[1], 10);
@@ -27,8 +46,35 @@ export const parseWeekDate = (weekStr: string): Date | null => {
     return new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
   }
 
+  // Format "DD/MM/YYYY" or "DD/MM/YY"
+  const slashMatch = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (slashMatch) {
+    const p1 = parseInt(slashMatch[1], 10);
+    const p2 = parseInt(slashMatch[2], 10);
+    let year = parseInt(slashMatch[3], 10);
+    if (year < 100) year += 2000;
+    // Assume DD/MM/YYYY unless p2 > 12
+    if (p2 <= 12) {
+      return new Date(year, p2 - 1, p1);
+    } else {
+      return new Date(year, p1 - 1, p2);
+    }
+  }
+
   const parsed = new Date(clean);
   return isNaN(parsed.getTime()) ? null : parsed;
+};
+
+// Formats any date input into canonical DD-MMM-YY display week (e.g. 24-Jun-26)
+export const formatDateToCanonicalWeek = (val: any, fallback: string = '24-Jun-26'): string => {
+  const d = parseWeekDate(val);
+  if (!d) return typeof val === 'string' && val.trim() ? val.trim() : fallback;
+  
+  const day = String(d.getDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getMonth()] || 'Jun';
+  const year = String(d.getFullYear()).slice(-2);
+  return `${day}-${month}-${year}`;
 };
 
 // Sort week strings chronologically

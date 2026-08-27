@@ -6,6 +6,7 @@ import { IntVsExtDistributionData, DemandRecord } from '../../types';
 import { FileSpreadsheet } from 'lucide-react';
 import { aggregateIntVsExtDistribution } from '../../utils/excelParser';
 import { DateFilterPreset, filterRecordsByDatePreset, analyzeDatePresets } from '../../utils/dateFilterUtils';
+import { isActiveRecord } from '../../utils/statusUtils';
 import { DatePresetFilter } from '../common/DatePresetFilter';
 
 interface IntVsExtPieChartProps {
@@ -53,8 +54,7 @@ export const IntVsExtPieChart: React.FC<IntVsExtPieChartProps> = ({
   const chartData = useMemo(() => {
     if (!rawRecords || rawRecords.length === 0) return data;
     
-    const inactive = new Set(['Dropped', 'Filled', 'Closed']);
-    const activeRecords = rawRecords.filter(r => !inactive.has((r.status || '').trim()));
+    const activeRecords = rawRecords.filter(r => isActiveRecord(r));
     const filtered = filterRecordsByDatePreset(activeRecords, datePreset, customStart, customEnd);
 
     return aggregateIntVsExtDistribution(filtered);

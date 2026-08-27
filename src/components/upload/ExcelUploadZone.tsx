@@ -6,15 +6,13 @@ import {
   CheckCircle, 
   AlertCircle, 
   ArrowRight, 
-  Sparkles,
-  RefreshCw
+  Sparkles, 
+  RefreshCw 
 } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
-import { useAuth } from '../../contexts/AuthContext';
 
 export const ExcelUploadZone: React.FC = () => {
   const { processUploadedFile, setActiveTab } = useData();
-  const { user } = useAuth();
   
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -58,7 +56,7 @@ export const ExcelUploadZone: React.FC = () => {
 
       if (result.success) {
         setProgress(100);
-        setValidationInfo(result.message || '516 rows detected. 516 valid records parsed successfully.');
+        setValidationInfo(result.message || 'Spreadsheet uploaded and parsed successfully.');
         setTimeout(() => {
           setIsUploading(false);
           setUploadSuccess(true);
@@ -125,7 +123,7 @@ export const ExcelUploadZone: React.FC = () => {
           Upload Demand Spreadsheet
         </h2>
         <p className="text-sm text-slate-500 max-w-lg mx-auto font-medium">
-          Drag and drop your company demand workbook.
+          Drag and drop your company demand workbook (.xlsx / .xls) to parse and analyze locally.
         </p>
       </div>
 
@@ -217,7 +215,7 @@ export const ExcelUploadZone: React.FC = () => {
                 </div>
 
                 <p className="text-xs text-slate-400 font-medium pt-1">
-                  Validating sheet rows, mapping position metrics, saving to Cloud Firestore...
+                  Validating sheet rows, mapping position metrics, saving to local storage...
                 </p>
               </div>
             </motion.div>

@@ -25,6 +25,14 @@ import { AgeingDistributionChart } from '../components/charts/AgeingDistribution
 import { RecentUploadCard } from '../components/cards/RecentUploadCard';
 import { pageVariants, containerStaggerVariants } from '../lib/animations';
 import { DemandRecord, WowTrendPoint, IntVsExtDistributionData } from '../types';
+import { 
+  isActiveRecord, 
+  isDroppedRecord, 
+  isFilledRecord, 
+  isOpenRecord, 
+  isIdentifiedRecord, 
+  isHoldRecord 
+} from '../utils/statusUtils';
 
 export const Dashboard: React.FC = () => {
   const {
@@ -95,19 +103,15 @@ export const Dashboard: React.FC = () => {
     } else if (dataKey === 'newDemand') {
       modalTitle = `New Positions - Week ${weekIso}`;
       matchingRecords = weekRecords.filter(r => (r.newCount && r.newCount > 0) || (r.status && r.status.toLowerCase().includes('new')));
-      if (matchingRecords.length === 0) matchingRecords = weekRecords;
     } else if (dataKey === 'droppedDemand') {
       modalTitle = `Dropped Positions - Week ${weekIso}`;
-      matchingRecords = weekRecords.filter(r => (r.droppedCount && r.droppedCount > 0) || (r.status && r.status.toLowerCase().includes('drop')));
-      if (matchingRecords.length === 0) matchingRecords = weekRecords;
+      matchingRecords = weekRecords.filter(r => isDroppedRecord(r));
     } else if (dataKey === 'openDemand') {
       modalTitle = `Active Positions - Week ${weekIso}`;
-      matchingRecords = weekRecords.filter(r => (r.openCount && r.openCount > 0) || r.status === 'Open' || r.status === 'Identified' || r.status === 'Hold');
-      if (matchingRecords.length === 0) matchingRecords = weekRecords;
+      matchingRecords = weekRecords.filter(r => isActiveRecord(r));
     } else if (dataKey === 'filledDemand') {
       modalTitle = `Fulfilled Positions - Week ${weekIso}`;
-      matchingRecords = weekRecords.filter(r => (r.closedCount && r.closedCount > 0) || r.status === 'Filled' || r.status === 'Closed');
-      if (matchingRecords.length === 0) matchingRecords = weekRecords;
+      matchingRecords = weekRecords.filter(r => isFilledRecord(r));
     } else {
       modalTitle = `${chartTitle} - Week ${weekIso}`;
       matchingRecords = weekRecords;
@@ -154,17 +158,28 @@ export const Dashboard: React.FC = () => {
 
   // Drilldown handler for Client pie slices / list
   const handleClientClick = (clientName: string) => {
-    const pool = filteredRecords.length > 0 ? filteredRecords : records;
-    const inactive = new Set(['Dropped', 'Filled', 'Closed']);
-    const matchingRecords = pool
-      .filter(r => !inactive.has((r.status || '').trim()))
-      .filter(r => (r.client || r.department || 'Delivery').trim().toLowerCase() === clientName.trim().toLowerCase());
+    let pool: DemandRecord[];
+    if (clientName === 'Others') {
+      // "Others" groups all clients not in the top 5 — use activeSnapshotRecords
+      const topClients = new Set(
+        activeClientDistribution
+          .filter(d => d.name !== 'Others')
+          .map(d => d.name.trim().toLowerCase())
+      );
+      pool = activeSnapshotRecords.filter(r =>
+        !topClients.has((r.client || r.department || 'Delivery').trim().toLowerCase())
+      );
+    } else {
+      pool = activeSnapshotRecords.filter(r =>
+        (r.client || r.department || 'Delivery').trim().toLowerCase() === clientName.trim().toLowerCase()
+      );
+    }
 
     setModalState({
       isOpen: true,
-      title: `${clientName} Positions - Week ${formatWeekToIsoDate(s.latestSnapshotWeek)}`,
-      subtitle: `${matchingRecords.length} records found for this selection.`,
-      records: matchingRecords
+      title: `${clientName} — Active Demand`,
+      subtitle: `${pool.length} active records for ${clientName}.`,
+      records: pool
     });
   };
 
@@ -179,22 +194,13 @@ export const Dashboard: React.FC = () => {
       matchingRecords = activeSnapshotRecords;
     } else if (type === 'open') {
       modalTitle = `Active Demand - Week ${weekIso}`;
-      matchingRecords = activeSnapshotRecords.filter(
-        r => r.status === 'Open' || r.status === 'Active' || (r.openCount !== undefined && r.openCount > 0)
-      );
-      if (matchingRecords.length === 0) matchingRecords = activeSnapshotRecords;
+      matchingRecords = activeSnapshotRecords.filter(r => isOpenRecord(r));
     } else if (type === 'identified') {
       modalTitle = `Identified Demand - Week ${weekIso}`;
-      matchingRecords = activeSnapshotRecords.filter(
-        r => r.status === 'Identified' || r.status === 'Offered' || (r.status && r.status.toLowerCase().includes('identified')) || (r.identifiedCount !== undefined && r.identifiedCount > 0)
-      );
-      if (matchingRecords.length === 0) matchingRecords = activeSnapshotRecords;
+      matchingRecords = activeSnapshotRecords.filter(r => isIdentifiedRecord(r));
     } else if (type === 'hold') {
       modalTitle = `On Hold Demand - Week ${weekIso}`;
-      matchingRecords = activeSnapshotRecords.filter(
-        r => r.status === 'Hold' || (r.status && r.status.toLowerCase().includes('hold')) || (r.holdCount !== undefined && r.holdCount > 0)
-      );
-      if (matchingRecords.length === 0) matchingRecords = activeSnapshotRecords;
+      matchingRecords = activeSnapshotRecords.filter(r => isHoldRecord(r));
     }
 
     setModalState({
@@ -213,10 +219,10 @@ export const Dashboard: React.FC = () => {
 
     if (type === 'fulfilled') {
       modalTitle = 'Cumulative Fulfilled Positions - All Periods';
-      matchingRecords = pool.filter(r => (r.closedCount && r.closedCount > 0) || r.status === 'Filled' || r.status === 'Closed');
+      matchingRecords = pool.filter(r => isFilledRecord(r));
     } else if (type === 'dropped') {
       modalTitle = 'Cumulative Dropped Positions - All Periods';
-      matchingRecords = pool.filter(r => (r.droppedCount && r.droppedCount > 0) || (r.status && r.status.toLowerCase().includes('drop')));
+      matchingRecords = pool.filter(r => isDroppedRecord(r));
     } else if (type === 'new') {
       modalTitle = 'Cumulative New Positions - All Periods';
       matchingRecords = pool.filter(r => (r.newCount && r.newCount > 0) || (r.status && r.status.toLowerCase().includes('new')));

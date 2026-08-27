@@ -8,6 +8,20 @@ import {
   IntVsExtDistributionData,
   DepartmentDistributionData
 } from '../types';
+import { 
+  sortWeeksChronologically, 
+  formatDateToCanonicalWeek, 
+  parseWeekDate 
+} from './dateFilterUtils';
+import { 
+  normalizeStatus, 
+  isActiveRecord, 
+  isDroppedRecord, 
+  isFilledRecord, 
+  isOpenRecord, 
+  isIdentifiedRecord, 
+  isHoldRecord 
+} from './statusUtils';
 
 export interface ParseResult {
   records: DemandRecord[];
@@ -23,20 +37,6 @@ export interface ParseResult {
     missingColumns?: string[];
   };
 }
-
-// Convert Excel Serial Date or Date string to clean formatted week string (e.g., 24-Jun-26)
-const formatExcelDate = (val: any): string => {
-  if (!val) return '24-Jun-26';
-  if (typeof val === 'number') {
-    const date = new Date(Math.round((val - 25569) * 86400 * 1000));
-    const day = String(date.getDate()).padStart(2, '0');
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = months[date.getMonth()] || 'Jun';
-    const year = String(date.getFullYear()).slice(-2);
-    return `${day}-${month}-${year}`;
-  }
-  return String(val).trim();
-};
 
 export const calculateAnalyticsSummary = (records: DemandRecord[]): AnalyticsSummary => {
   const emptySnapshot = {
@@ -73,26 +73,14 @@ export const calculateAnalyticsSummary = (records: DemandRecord[]): AnalyticsSum
     };
   }
 
-  // ── Detect the latest snapshot week ──────────────────────────────────────
-  const weekOrder = ['24-Jun-26', '01-Jul-26', '08-Jul-26', '16-Jul-26', '22-Jul-26', '29-Jul-26'];
-  const weeksInData = new Set(records.map(r => r.week).filter(Boolean) as string[]);
-
-  // Find the latest known week that has data; fall back to last in set
-  let latestWeek = '';
-  for (let i = weekOrder.length - 1; i >= 0; i--) {
-    if (weeksInData.has(weekOrder[i])) {
-      latestWeek = weekOrder[i];
-      break;
-    }
-  }
-  if (!latestWeek) {
-    // Fallback: last unique week by insertion order
-    latestWeek = Array.from(weeksInData)[Array.from(weeksInData).length - 1] || '';
-  }
+  // ── Dynamically detect the latest snapshot week chronologically ────────────
+  const weeksInData = Array.from(new Set(records.map(r => r.week).filter(Boolean) as string[]));
+  const sortedWeeks = sortWeeksChronologically(weeksInData);
+  const latestWeek = sortedWeeks.length > 0 ? sortedWeeks[sortedWeeks.length - 1] : (records[0]?.week || '');
 
   const latestRows = records.filter(r => r.week === latestWeek);
 
-  // ── Cumulative pass (all rows) ────────────────────────────────────────────
+  // ── Cumulative pass across all records ─────────────────────────────────────
   let totalPositions = 0;
   let totalOpen = 0;
   let totalClosed = 0;
@@ -106,16 +94,20 @@ export const calculateAnalyticsSummary = (records: DemandRecord[]): AnalyticsSum
     const pos = r.requiredCount || 1;
     totalPositions += pos;
 
-    const openCount = r.openCount !== undefined ? r.openCount : (r.status === 'Open' || r.status === 'Identified' || r.status === 'Offered' ? pos : 0);
-    const closedCount = r.closedCount !== undefined ? r.closedCount : (r.status === 'Filled' || r.status === 'Closed' ? pos : 0);
-    const droppedCount = r.droppedCount !== undefined ? r.droppedCount : (r.status === 'Dropped' ? pos : 0);
+    const isDropped = isDroppedRecord(r);
+    const isClosed = isFilledRecord(r);
+    const isActive = isActiveRecord(r);
+
+    const openCount = r.openCount !== undefined ? r.openCount : (isActive ? pos : 0);
+    const closedCount = r.closedCount !== undefined ? r.closedCount : (isClosed ? pos : 0);
+    const droppedCount = r.droppedCount !== undefined ? r.droppedCount : (isDropped ? pos : 0);
     const newCount = r.newCount !== undefined ? r.newCount : 0;
 
-    totalOpen += openCount;
+    if (isActive) totalOpen += openCount;
     totalClosed += closedCount;
     totalDropped += droppedCount;
     totalNew += newCount;
-    if (openCount > 0) openReqCount++;
+    if (isActive && openCount > 0) openReqCount++;
 
     if (r.internalExternal?.toLowerCase().includes('internal') || r.status?.toLowerCase().includes('bench')) {
       totalBench += pos;
@@ -123,10 +115,7 @@ export const calculateAnalyticsSummary = (records: DemandRecord[]): AnalyticsSum
     if (r.client) clientsSet.add(r.client.trim());
   });
 
-  // ── Latest-snapshot pass — uses Position Status (r.status), NOT weekly event columns ──
-  // This is the key semantic fix:
-  //   r.openCount  = weekly movement field (0 on 29-Jul → misleading)
-  //   r.status     = current position state (Open/Identified/Hold/Dropped/Filled)
+  // ── Latest snapshot pass (using strict active / dropped / closed status) ────
   let latestTotal = 0;
   let latestOpen = 0;
   let latestIdentified = 0;
@@ -138,27 +127,25 @@ export const calculateAnalyticsSummary = (records: DemandRecord[]): AnalyticsSum
 
   latestRows.forEach((r) => {
     const pos = r.requiredCount || 1;
-    const status = (r.status || '').trim();
     latestTotal += pos;
 
-    // Bucket by Position Status — not by openCount/closedCount columns
-    if (status === 'Open') {
-      latestOpen += pos;
-    } else if (status === 'Identified' || status === 'Offered') {
-      latestIdentified += pos;
-    } else if (status === 'Hold' || status === 'Bench') {
-      latestHold += pos;
-    } else if (status === 'Dropped') {
+    if (isDroppedRecord(r)) {
       latestDropped += pos;
-    } else if (status === 'Filled' || status === 'Closed') {
+    } else if (isFilledRecord(r)) {
       latestClosedWeek += pos;
+    } else if (isIdentifiedRecord(r)) {
+      latestIdentified += pos;
+    } else if (isHoldRecord(r)) {
+      latestHold += pos;
+    } else if (isOpenRecord(r)) {
+      latestOpen += pos;
+    } else {
+      latestOpen += pos;
     }
 
-    // Internal vs External: track active demand only (exclude Dropped/Filled/Closed)
-    const isActive = status === 'Open' || status === 'Identified' || status === 'Offered'
-      || status === 'Hold' || status === 'Bench';
-    if (isActive) {
-      if (r.internalExternal?.toLowerCase().includes('internal')) {
+    // Internal vs External: only count active requirements
+    if (isActiveRecord(r)) {
+      if (r.internalExternal?.toLowerCase().includes('internal') || r.status?.toLowerCase().includes('bench')) {
         latestInternal += pos;
       } else {
         latestExternal += pos;
@@ -172,11 +159,9 @@ export const calculateAnalyticsSummary = (records: DemandRecord[]): AnalyticsSum
   const fulfillmentRate = totalPositions > 0 ? Math.round((totalClosed / totalPositions) * 1000) / 10 : 0;
   const benchPercentage = totalPositions > 0 ? Math.round((totalBench / totalPositions) * 1000) / 10 : 0;
 
-  // Round to 2dp for FTE display
   const round2 = (n: number) => Math.round(n * 100) / 100;
 
   return {
-    // Legacy (cumulative) — kept for backwards compat
     currentDemand: Math.round(totalOpen),
     benchEmployees: Math.round(totalBench),
     openPositions: openReqCount,
@@ -190,7 +175,7 @@ export const calculateAnalyticsSummary = (records: DemandRecord[]): AnalyticsSum
     benchPercentage,
     lastUpdated: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
 
-    // Latest snapshot (all from Position Status column)
+    // Latest snapshot
     latestTotalFTE: round2(latestTotal),
     latestOpenFTE: round2(latestOpen),
     latestIdentifiedFTE: round2(latestIdentified),
@@ -209,12 +194,11 @@ export const calculateAnalyticsSummary = (records: DemandRecord[]): AnalyticsSum
   };
 };
 
-
 // Filter records by Relative Period or Custom Date Range
 export const filterDemandRecords = (records: DemandRecord[], filters: FilterState): DemandRecord[] => {
   if (!records || records.length === 0) return [];
 
-  const uniqueWeeks = Array.from(new Set(records.map(r => r.week).filter(Boolean) as string[]));
+  const uniqueWeeks = sortWeeksChronologically(Array.from(new Set(records.map(r => r.week).filter(Boolean) as string[])));
   const uniqueMonths = Array.from(new Set(records.map(r => r.startMonth).filter(Boolean) as string[]));
 
   const latestWeek = uniqueWeeks[uniqueWeeks.length - 1];
@@ -283,10 +267,17 @@ export const aggregateWowTrends = (records: DemandRecord[]): WowTrendPoint[] => 
       weekMap[week] = { total: 0, newPos: 0, open: 0, filled: 0, dropped: 0 };
     }
     const pos = r.requiredCount || 1;
-    const open = r.openCount !== undefined ? r.openCount : (r.status === 'Open' || r.status === 'Identified' ? pos : 0);
-    const closed = r.closedCount !== undefined ? r.closedCount : (r.status === 'Filled' || r.status === 'Closed' ? pos : 0);
-    const dropped = r.droppedCount !== undefined ? r.droppedCount : (r.status === 'Dropped' ? pos : 0);
-    const newPos = r.newCount !== undefined ? r.newCount : 0;
+    
+    // Strict semantic activity check — isActiveRecord now excludes Dropped/Filled by status keyword first
+    const isDropped = isDroppedRecord(r);
+    const isClosed = isFilledRecord(r);
+    const isActive = isActiveRecord(r);
+
+    // Use requiredCount as the active FTE count; openCount columns are often 0 in raw spreadsheets
+    const open = isActive ? pos : 0;
+    const closed = isClosed ? (r.closedCount !== undefined && r.closedCount > 0 ? r.closedCount : pos) : 0;
+    const dropped = isDropped ? (r.droppedCount !== undefined && r.droppedCount > 0 ? r.droppedCount : pos) : 0;
+    const newPos = r.newCount !== undefined && r.newCount > 0 ? r.newCount : (r.status?.toLowerCase().includes('new') ? pos : 0);
 
     weekMap[week].total += pos;
     weekMap[week].newPos += newPos;
@@ -295,46 +286,31 @@ export const aggregateWowTrends = (records: DemandRecord[]): WowTrendPoint[] => 
     weekMap[week].dropped += dropped;
   });
 
-  const weekOrder = ['24-Jun-26', '01-Jul-26', '08-Jul-26', '16-Jul-26', '22-Jul-26', '29-Jul-26'];
-  const result: WowTrendPoint[] = [];
-
-  weekOrder.forEach((w) => {
-    if (weekMap[w]) {
-      result.push({
-        week: w,
-        totalDemand: Math.round(weekMap[w].total),
-        newDemand: Math.round(weekMap[w].newPos),
-        openDemand: Math.round(weekMap[w].open),
-        filledDemand: Math.round(weekMap[w].filled),
-        droppedDemand: Math.round(weekMap[w].dropped)
-      });
-    }
+  const sortedWeeks = sortWeeksChronologically(Object.keys(weekMap));
+  return sortedWeeks.map((w) => {
+    const val = weekMap[w];
+    return {
+      week: w,
+      totalDemand: Math.round(val.total),
+      newDemand: Math.round(val.newPos),
+      openDemand: Math.round(val.open),
+      filledDemand: Math.round(val.filled),
+      droppedDemand: Math.round(val.dropped)
+    };
   });
-
-  if (result.length === 0) {
-    Object.entries(weekMap).forEach(([w, val]) => {
-      result.push({
-        week: w,
-        totalDemand: Math.round(val.total),
-        newDemand: Math.round(val.newPos),
-        openDemand: Math.round(val.open),
-        filledDemand: Math.round(val.filled),
-        droppedDemand: Math.round(val.dropped)
-      });
-    });
-  }
-
-  return result;
 };
 
-// Internal vs External Distribution Aggregator (Position Headcount based)
+// Internal vs External Distribution Aggregator (Active demand only — excludes Dropped/Filled)
 export const aggregateIntVsExtDistribution = (records: DemandRecord[]): IntVsExtDistributionData[] => {
   if (!records || records.length === 0) return [];
 
   let internalCount = 0;
   let externalCount = 0;
 
-  records.forEach((r) => {
+  // Only count records that are truly active (Open, Identified, Hold)
+  const activeRecords = records.filter(r => isActiveRecord(r));
+
+  activeRecords.forEach((r) => {
     const pos = r.requiredCount || 1;
     if (r.internalExternal?.toLowerCase().includes('internal') || r.status?.toLowerCase().includes('bench')) {
       internalCount += pos;
@@ -353,14 +329,17 @@ export const aggregateIntVsExtDistribution = (records: DemandRecord[]): IntVsExt
   ];
 };
 
-// Location Distribution Aggregator
+// Location Distribution Aggregator (Active demand only — excludes Dropped/Filled)
 export const aggregateLocationDistribution = (records: DemandRecord[]): { name: string; value: number; percentage: number; color: string }[] => {
   if (!records || records.length === 0) return [];
 
   const locationCounts: Record<string, number> = {};
   let total = 0;
 
-  records.forEach((r) => {
+  // Only count active records
+  const activeRecords = records.filter(r => isActiveRecord(r));
+
+  activeRecords.forEach((r) => {
     const loc = (r.location || 'Offshore').trim();
     const formattedLoc = loc.charAt(0).toUpperCase() + loc.slice(1).toLowerCase();
     const pos = r.requiredCount || 1;
@@ -382,13 +361,16 @@ export const aggregateLocationDistribution = (records: DemandRecord[]): { name: 
   });
 };
 
-// Client Position Demand Distribution Aggregator (Top 5 + Others grouping)
+// Client Position Demand Distribution Aggregator (Active demand only — Top 5 + Others grouping)
 export const aggregateClientDistribution = (records: DemandRecord[]): DepartmentDistributionData[] => {
   if (!records || records.length === 0) return [];
 
   const clientCounts: Record<string, number> = {};
 
-  records.forEach((r) => {
+  // Only count active records (Open, Identified, Hold — not Dropped/Filled)
+  const activeRecords = records.filter(r => isActiveRecord(r));
+
+  activeRecords.forEach((r) => {
     const client = r.client || r.department || 'Delivery';
     clientCounts[client] = (clientCounts[client] || 0) + (r.requiredCount || 1);
   });
@@ -424,26 +406,32 @@ export const aggregateClientDistribution = (records: DemandRecord[]): Department
   return top5;
 };
 
-// Helper: returns only the records belonging to the latest snapshot week.
-// Used by DataContext to feed latest-snapshot data to pie/donut charts.
+// Helper: returns only the records belonging to the latest snapshot week chronologically.
 export const getLatestSnapshotRecords = (records: DemandRecord[]): DemandRecord[] => {
   if (!records || records.length === 0) return [];
-  const weekOrder = ['24-Jun-26', '01-Jul-26', '08-Jul-26', '16-Jul-26', '22-Jul-26', '29-Jul-26'];
-  const weeksInData = new Set(records.map(r => r.week).filter(Boolean) as string[]);
-  let latestWeek = '';
-  for (let i = weekOrder.length - 1; i >= 0; i--) {
-    if (weeksInData.has(weekOrder[i])) { latestWeek = weekOrder[i]; break; }
-  }
-  if (!latestWeek) latestWeek = Array.from(weeksInData)[Array.from(weeksInData).length - 1] || '';
+  const weeksInData = Array.from(new Set(records.map(r => r.week).filter(Boolean) as string[]));
+  const sortedWeeks = sortWeeksChronologically(weeksInData);
+  const latestWeek = sortedWeeks.length > 0 ? sortedWeeks[sortedWeeks.length - 1] : (records[0]?.week || '');
   return records.filter(r => r.week === latestWeek);
 };
 
-// Returns latest-snapshot rows with Dropped / Filled / Closed excluded.
-// Use this to feed charts that should reflect ACTIVE demand only.
+// Returns latest-snapshot rows with Dropped / Filled / Closed strictly excluded.
 export const getActiveSnapshotRecords = (records: DemandRecord[]): DemandRecord[] => {
   const latestRows = getLatestSnapshotRecords(records);
-  const inactive = new Set(['Dropped', 'Filled', 'Closed']);
-  return latestRows.filter(r => !inactive.has((r.status || '').trim()));
+  return latestRows.filter(r => isActiveRecord(r));
+};
+
+// Flexible helper to find any matching key in row with case/space insensitivity
+const getRowValue = (row: Record<string, any>, candidates: string[]): any => {
+  const keys = Object.keys(row);
+  for (const candidate of candidates) {
+    const cleanCand = candidate.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const foundKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanCand);
+    if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') {
+      return row[foundKey];
+    }
+  }
+  return undefined;
 };
 
 export const parseExcelFile = async (file: File, uploaderName: string = 'prudhvi.karri'): Promise<ParseResult> => {
@@ -453,7 +441,7 @@ export const parseExcelFile = async (file: File, uploaderName: string = 'prudhvi
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
@@ -466,46 +454,65 @@ export const parseExcelFile = async (file: File, uploaderName: string = 'prudhvi
 
         rawJson.forEach((row, index) => {
           // Check essential identifier or position fields
-          const clientName = row['Client'] || row['Customer'] || row['Opportunity Name'];
-          const roleTitle = row['Role'] || row['Position'] || row['Title'] || row['Primary Skill'];
+          const clientName = getRowValue(row, ['Client', 'Customer', 'Opportunity Name', 'Account', 'Company']);
+          const roleTitle = getRowValue(row, ['Role', 'Position', 'Title', 'Primary Skill', 'Skill', 'Requisition Title', 'Job Title']);
           
           if (!clientName && !roleTitle) {
             skippedCount++;
-            return; // Skip invalid row missing required client/role identity
+            return;
           }
 
-          const posCount = parseFloat(row['Positions'] || row['Total Positions'] || row['Count'] || row['Headcount'] || '1') || 1;
-          const openCount = parseFloat(row['Open Positions'] || '0');
-          const closedCount = parseFloat(row['Closed Positions'] || '0');
-          const droppedCount = parseFloat(row['Dropped Positions'] || '0');
-          const newCount = parseFloat(row['New Positions'] || '0');
+          const rawPos = getRowValue(row, ['Positions', 'Total Positions', 'Count', 'Headcount', 'No of Positions', 'Openings', 'Required Count']) || '1';
+          const posCount = Math.max(1, parseFloat(String(rawPos)) || 1);
 
-          const rawProb = parseFloat(row['Oppo Prob']);
+          const openCount = parseFloat(String(getRowValue(row, ['Open Positions', 'Open Count', 'Open', 'Active Positions']) || '0')) || 0;
+          const closedCount = parseFloat(String(getRowValue(row, ['Closed Positions', 'Closed Count', 'Filled Positions', 'Filled Count', 'Closed', 'Filled']) || '0')) || 0;
+          const droppedCount = parseFloat(String(getRowValue(row, ['Dropped Positions', 'Dropped Count', 'Cancelled Positions', 'Lost Positions', 'Dropped', 'Cancelled']) || '0')) || 0;
+          const newCount = parseFloat(String(getRowValue(row, ['New Positions', 'New Count', 'New Demand', 'Added Positions', 'New']) || '0')) || 0;
+
+          const rawProb = parseFloat(String(getRowValue(row, ['Oppo Prob', 'Probability', 'Win Probability']) || ''));
           const oppoProb = !isNaN(rawProb) ? rawProb : undefined;
+
+          const rawStatus = getRowValue(row, ['Position Status', 'Status', 'Current Status', 'Stage', 'Oppo Stage', 'Requisition Status']);
+          const finalStatus = normalizeStatus(rawStatus, row);
+
+          const rawWeek = getRowValue(row, ['Week', 'Firsttime Fill by Week', 'Snapshot Week', 'Reporting Week', 'Week Ending', 'Date']);
+          const canonicalWeek = formatDateToCanonicalWeek(rawWeek);
+
+          const rawDateAdded = getRowValue(row, ['Start Date', 'Created Date', 'Date Added', 'Req Date', 'Date']);
+          let dateAddedStr = new Date().toISOString().split('T')[0];
+          if (rawDateAdded) {
+            const parsedD = parseWeekDate(rawDateAdded);
+            if (parsedD) {
+              dateAddedStr = parsedD.toISOString().split('T')[0];
+            } else {
+              dateAddedStr = String(rawDateAdded);
+            }
+          }
 
           validRecords.push({
             id: `rec-${1000 + index}`,
-            jobId: row['Job ID'] || row['JobID'] || row['Opportunity Name'] || `REQ-${1000 + index}`,
-            client: clientName || 'Internal',
-            opportunityName: row['Opportunity Name'] || clientName || `Opportunity-${index}`,
-            department: row['Department'] || row['Dept'] || 'Delivery',
-            position: roleTitle || 'Engineer',
-            experienceLevel: row['Experience'] || row['Level'] || 'Senior',
-            status: row['Position Status'] || row['Status'] || row['Oppo Stage'] || 'Identified',
+            jobId: String(getRowValue(row, ['Job ID', 'JobID', 'Opportunity Name', 'Req ID', 'Requisition ID']) || `REQ-${1000 + index}`),
+            client: String(clientName || 'Internal').trim(),
+            opportunityName: String(getRowValue(row, ['Opportunity Name', 'Opportunity', 'Deal Name']) || clientName || `Opportunity-${index}`).trim(),
+            department: String(getRowValue(row, ['Department', 'Dept', 'Practice', 'BU', 'Business Unit']) || 'Delivery').trim(),
+            position: String(roleTitle || 'Engineer').trim(),
+            experienceLevel: String(getRowValue(row, ['Experience', 'Level', 'Seniority', 'Exp Level']) || 'Senior').trim(),
+            status: finalStatus,
             requiredCount: posCount,
             openCount,
             closedCount,
             droppedCount,
             newCount,
-            location: row['Location'] || 'Offshore',
-            internalExternal: row['Internal / External'] || 'Internal',
-            dealOwner: row['Deal Owner'] || row['ED'] || '',
-            startMonth: row['Start Month'] || 'Aug-2026',
-            dateAdded: row['Start Date'] ? String(row['Start Date']) : new Date().toISOString().split('T')[0],
-            oppoType: row['Oppo Type'] ? String(row['Oppo Type']).trim() : undefined,
+            location: String(getRowValue(row, ['Location', 'Work Location', 'Base Location', 'City']) || 'Offshore').trim(),
+            internalExternal: String(getRowValue(row, ['Internal / External', 'Internal/External', 'Int/Ext', 'Source', 'Sourcing', 'Type']) || 'Internal').trim(),
+            dealOwner: String(getRowValue(row, ['Deal Owner', 'ED', 'Owner', 'Account Manager', 'Lead']) || '').trim(),
+            startMonth: String(getRowValue(row, ['Start Month', 'Joining Month', 'Month']) || 'Aug-2026').trim(),
+            dateAdded: dateAddedStr,
+            oppoType: getRowValue(row, ['Oppo Type', 'Deal Type', 'Opportunity Type']) ? String(getRowValue(row, ['Oppo Type', 'Deal Type', 'Opportunity Type'])).trim() : undefined,
             oppoProb,
-            week: formatExcelDate(row['Week'] || row['Firsttime Fill by Week']),
-            employeeName: row['Employee Name'] || row['Emp Name'] || row['Candidate Name'] || row['Candidate'] || row['Resource Name'] || row['Employee'] || '-'
+            week: canonicalWeek,
+            employeeName: String(getRowValue(row, ['Employee Name', 'Emp Name', 'Candidate Name', 'Candidate', 'Resource Name', 'Employee', 'Selected Candidate']) || '-').trim()
           });
         });
 
@@ -515,8 +522,9 @@ export const parseExcelFile = async (file: File, uploaderName: string = 'prudhvi
 
         const summary = calculateAnalyticsSummary(validRecords);
         const wowTrends = aggregateWowTrends(validRecords);
-        const intVsExtDistribution = aggregateIntVsExtDistribution(validRecords);
-        const clientDistribution = aggregateClientDistribution(validRecords);
+        const activeSnapshot = getActiveSnapshotRecords(validRecords);
+        const intVsExtDistribution = aggregateIntVsExtDistribution(activeSnapshot);
+        const clientDistribution = aggregateClientDistribution(activeSnapshot);
 
         const topClient = clientDistribution[0]?.name || 'Delivery';
 

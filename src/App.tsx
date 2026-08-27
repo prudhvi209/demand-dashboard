@@ -1,16 +1,12 @@
 import React from 'react';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider, useData } from './contexts/DataContext';
 import { AppShell } from './components/layout/AppShell';
-import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { UploadPage } from './pages/UploadPage';
-import { ProfilePage } from './pages/ProfilePage';
 import { AnimatePresence } from 'framer-motion';
 
-const MainRouter: React.FC = () => {
-  const { user, loading } = useAuth();
-  const { activeTab } = useData();
+const MainContent: React.FC = () => {
+  const { activeTab, loading } = useData();
 
   if (loading) {
     return (
@@ -23,16 +19,11 @@ const MainRouter: React.FC = () => {
     );
   }
 
-  if (!user) {
-    return <Login />;
-  }
-
   return (
     <AppShell>
       <AnimatePresence mode="wait">
         {activeTab === 'dashboard' && <Dashboard key="dashboard" />}
         {activeTab === 'upload' && <UploadPage key="upload" />}
-        {activeTab === 'profile' && <ProfilePage key="profile" />}
       </AnimatePresence>
     </AppShell>
   );
@@ -40,11 +31,9 @@ const MainRouter: React.FC = () => {
 
 export function App() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        <MainRouter />
-      </DataProvider>
-    </AuthProvider>
+    <DataProvider>
+      <MainContent />
+    </DataProvider>
   );
 }
 

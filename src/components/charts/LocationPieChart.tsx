@@ -6,6 +6,7 @@ import { DemandRecord } from '../../types';
 import { FileSpreadsheet } from 'lucide-react';
 import { aggregateLocationDistribution } from '../../utils/excelParser';
 import { DateFilterPreset, filterRecordsByDatePreset, analyzeDatePresets } from '../../utils/dateFilterUtils';
+import { isActiveRecord } from '../../utils/statusUtils';
 import { DatePresetFilter } from '../common/DatePresetFilter';
 
 interface LocationPieChartProps {
@@ -51,8 +52,7 @@ export const LocationPieChart: React.FC<LocationPieChartProps> = ({
 
   const activeFilteredRecords = useMemo(() => {
     if (!rawRecords || rawRecords.length === 0) return [];
-    const inactive = new Set(['Dropped', 'Filled', 'Closed']);
-    const activeRecords = rawRecords.filter(r => !inactive.has((r.status || '').trim()));
+    const activeRecords = rawRecords.filter(r => isActiveRecord(r));
     return filterRecordsByDatePreset(activeRecords, datePreset, customStart, customEnd);
   }, [rawRecords, datePreset, customStart, customEnd]);
 

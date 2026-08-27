@@ -8,7 +8,7 @@ import {
   IntVsExtDistributionData,
   DepartmentDistributionData 
 } from '../types';
-import { fetchCurrentDataset, saveParsedDatasetToFirestore } from '../firebase/firestore';
+import { fetchCurrentDataset, saveParsedDatasetToStorage, clearLocalStorageDataset } from '../services/storage';
 import { 
   parseExcelFile, 
   filterDemandRecords, 
@@ -20,7 +20,6 @@ import {
   getLatestSnapshotRecords,
   getActiveSnapshotRecords
 } from '../utils/excelParser';
-import { useAuth } from './AuthContext';
 
 interface DataContextType {
   records: DemandRecord[];
@@ -46,13 +45,14 @@ interface DataContextType {
   setFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   resetFilters: () => void;
   loading: boolean;
-  activeTab: 'dashboard' | 'upload' | 'profile';
-  setActiveTab: (tab: 'dashboard' | 'upload' | 'profile') => void;
+  activeTab: 'dashboard' | 'upload';
+  setActiveTab: (tab: 'dashboard' | 'upload') => void;
   isSidebarCollapsed: boolean;
   setIsSidebarCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   toggleSidebar: () => void;
   processUploadedFile: (file: File) => Promise<{ success: boolean; message?: string }>;
   refreshData: () => Promise<void>;
+  clearData: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
 }
@@ -71,7 +71,6 @@ const INITIAL_FILTERS: FilterState = {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
   const [records, setRecords] = useState<DemandRecord[]>([]);
   const [summary, setSummary] = useState<AnalyticsSummary>({
     currentDemand: 0,
@@ -104,7 +103,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [recentUploads, setRecentUploads] = useState<UploadHistoryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'upload' | 'profile'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'upload'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -161,9 +160,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return aggregateClientDistribution(filteredRecords);
   }, [filteredRecords]);
 
-  // Latest-snapshot distributions (always from the most-recent week, not affected by filters)
-  const latestSnapshotRecords = useMemo(() => getLatestSnapshotRecords(records), [records]);
-  const activeSnapshotRecords = useMemo(() => getActiveSnapshotRecords(records), [records]);
+  // Latest-snapshot distributions — computed from FILTERED records so filters take effect
+  const latestSnapshotRecords = useMemo(() => getLatestSnapshotRecords(filteredRecords), [filteredRecords]);
+  const activeSnapshotRecords = useMemo(() => getActiveSnapshotRecords(filteredRecords), [filteredRecords]);
 
   const latestSnapshotIntVsExt = useMemo(() => {
     return aggregateIntVsExtDistribution(latestSnapshotRecords);
@@ -187,11 +186,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const processUploadedFile = async (file: File): Promise<{ success: boolean; message?: string }> => {
     try {
-      const uploader = user?.displayName || user?.email || 'Analytics Manager';
+      const uploader = 'Local User';
       const result = await parseExcelFile(file, uploader);
 
-      // Save to Firestore & local storage
-      await saveParsedDatasetToFirestore(result.records, result.uploadHistoryItem);
+      // Save to local storage
+      await saveParsedDatasetToStorage(result.records, result.uploadHistoryItem);
 
       // Reset active filters & update state
       setFilters(INITIAL_FILTERS);
@@ -199,11 +198,48 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSummary(result.summary);
       setRecentUploads((prev) => [result.uploadHistoryItem, ...prev]);
 
-      return { success: true };
+      return { 
+        success: true, 
+        message: `${result.validationMetrics.totalRows} rows detected. ${result.validationMetrics.validCount} valid records processed successfully.` 
+      };
     } catch (err: any) {
       console.error("Process file failed:", err);
       return { success: false, message: err?.message || 'Failed to process Excel spreadsheet' };
     }
+  };
+
+  const clearData = () => {
+    clearLocalStorageDataset();
+    setRecords([]);
+    setFilters(INITIAL_FILTERS);
+    setRecentUploads([]);
+    setSummary({
+      currentDemand: 0,
+      benchEmployees: 0,
+      openPositions: 0,
+      closedPositions: 0,
+      droppedPositions: 0,
+      newPositions: 0,
+      totalClients: 0,
+      totalPositions: 0,
+      demandPercentage: 0,
+      fulfillmentRate: 0,
+      benchPercentage: 0,
+      lastUpdated: 'No Data Uploaded',
+      latestTotalFTE: 0,
+      latestOpenFTE: 0,
+      latestIdentifiedFTE: 0,
+      latestHoldFTE: 0,
+      latestActiveDemandFTE: 0,
+      latestDroppedFTE: 0,
+      latestClosedThisWeek: 0,
+      latestInternalFTE: 0,
+      latestExternalFTE: 0,
+      latestSnapshotWeek: '',
+      cumulativeClosed: 0,
+      cumulativeDropped: 0,
+      cumulativeNew: 0
+    });
   };
 
   return (
@@ -234,6 +270,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleSidebar,
         processUploadedFile,
         refreshData: loadData,
+        clearData,
         searchQuery,
         setSearchQuery
       }}
