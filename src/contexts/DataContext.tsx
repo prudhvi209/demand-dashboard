@@ -6,6 +6,7 @@ import {
   FilterState,
   WowTrendPoint,
   IntVsExtDistributionData,
+  IntVsExtTrendPoint,
   DepartmentDistributionData 
 } from '../types';
 import { fetchCurrentDataset, saveParsedDatasetToStorage, clearLocalStorageDataset } from '../services/storage';
@@ -15,6 +16,7 @@ import {
   calculateAnalyticsSummary, 
   aggregateWowTrends, 
   aggregateIntVsExtDistribution,
+  aggregateIntVsExtTrend,
   aggregateClientDistribution,
   aggregateLocationDistribution,
   getLatestSnapshotRecords,
@@ -28,6 +30,8 @@ interface DataContextType {
   filteredSummary: AnalyticsSummary;
   recentUploads: UploadHistoryItem[];
   wowTrends: WowTrendPoint[];
+  /** Week-by-week internal vs external active demand trend */
+  intVsExtTrend: IntVsExtTrendPoint[];
   /** Historical (all-week) Int vs Ext distribution — used for context only */
   intVsExtDistribution: IntVsExtDistributionData[];
   /** Latest-snapshot Int vs Ext distribution (all statuses) */
@@ -152,6 +156,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return aggregateWowTrends(filteredRecords);
   }, [filteredRecords]);
 
+  const intVsExtTrend = useMemo(() => {
+    return aggregateIntVsExtTrend(filteredRecords);
+  }, [filteredRecords]);
+
   const intVsExtDistribution = useMemo(() => {
     return aggregateIntVsExtDistribution(filteredRecords);
   }, [filteredRecords]);
@@ -251,6 +259,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         filteredSummary,
         recentUploads,
         wowTrends,
+        intVsExtTrend,
         intVsExtDistribution,
         latestSnapshotIntVsExt,
         activeSnapshotIntVsExt,

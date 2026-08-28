@@ -17,7 +17,7 @@ import { KpiCard } from '../components/cards/KpiCard';
 import { InfoTooltip } from '../components/common/InfoTooltip';
 import { ChartDetailsModal, formatWeekToIsoDate } from '../components/dashboard/ChartDetailsModal';
 import { WowDemandChart } from '../components/charts/WowDemandChart';
-import { IntVsExtPieChart } from '../components/charts/IntVsExtPieChart';
+import { IntVsExtTrendChart } from '../components/charts/IntVsExtTrendChart';
 import { DepartmentPieChart } from '../components/charts/DepartmentPieChart';
 import { LocationPieChart } from '../components/charts/LocationPieChart';
 import { CompanyAgeingChart } from '../components/charts/CompanyAgeingChart';
@@ -41,6 +41,7 @@ export const Dashboard: React.FC = () => {
     filteredSummary,
     recentUploads,
     wowTrends,
+    intVsExtTrend,
     activeSnapshotIntVsExt,
     activeClientDistribution,
     activeSnapshotLocation,
@@ -125,7 +126,7 @@ export const Dashboard: React.FC = () => {
     });
   };
 
-  // Drilldown handler for Internal vs External pie slices
+  // Drilldown handler for Internal vs External pie slices (legacy — kept for snapshot pie)
   const handleIntVsExtClick = (slice: IntVsExtDistributionData) => {
     const isInternal = slice.name.toLowerCase().includes('internal');
     const matchingRecords = activeSnapshotRecords.filter(r => 
@@ -138,6 +139,36 @@ export const Dashboard: React.FC = () => {
       isOpen: true,
       title: `${slice.name} Positions - Week ${formatWeekToIsoDate(s.latestSnapshotWeek)}`,
       subtitle: `${matchingRecords.length} records found for this selection.`,
+      records: matchingRecords
+    });
+  };
+
+  // Drilldown handler for Int vs Ext TREND chart point clicks
+  const handleIntVsExtTrendClick = (weekLabel: string, type: 'internal' | 'external') => {
+    const weekIso = formatWeekToIsoDate(weekLabel);
+    const pool = filteredRecords.length > 0 ? filteredRecords : records;
+
+    const weekRecords = pool.filter((r) => {
+      if (!r.week) return false;
+      return (
+        r.week.trim().toLowerCase() === weekLabel.trim().toLowerCase() ||
+        formatWeekToIsoDate(r.week) === weekIso
+      );
+    });
+
+    const isInternal = type === 'internal';
+    const matchingRecords = weekRecords.filter((r) =>
+      isActiveRecord(r) &&
+      (isInternal
+        ? (r.internalExternal?.toLowerCase().includes('internal') || r.status?.toLowerCase().includes('bench'))
+        : !(r.internalExternal?.toLowerCase().includes('internal') || r.status?.toLowerCase().includes('bench')))
+    );
+
+    const typeLabel = isInternal ? 'Internal' : 'External';
+    setModalState({
+      isOpen: true,
+      title: `${typeLabel} Active Positions — Week ${weekIso}`,
+      subtitle: `${matchingRecords.length} active ${typeLabel.toLowerCase()} records for this week.`,
       records: matchingRecords
     });
   };
@@ -469,12 +500,10 @@ export const Dashboard: React.FC = () => {
             onPointClick={handleWowPointClick}
           />
 
-          {/* Internal vs External: active demand only (excludes Dropped) */}
-          <IntVsExtPieChart
-            data={activeSnapshotIntVsExt}
-            rawRecords={filteredRecords.length > 0 ? filteredRecords : records}
-            snapshotWeek={snapshotWeek}
-            onSelectSlice={handleIntVsExtClick}
+          {/* Internal vs External: trend over weeks */}
+          <IntVsExtTrendChart
+            data={intVsExtTrend}
+            onPointClick={handleIntVsExtTrendClick}
           />
         </div>
       </div>

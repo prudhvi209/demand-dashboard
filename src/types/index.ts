@@ -125,6 +125,12 @@ export interface IntVsExtDistributionData {
   color: string;
 }
 
+export interface IntVsExtTrendPoint {
+  week: string;
+  internal: number;
+  external: number;
+}
+
 export interface DemandTrendData {
   month: string;
   demand: number;

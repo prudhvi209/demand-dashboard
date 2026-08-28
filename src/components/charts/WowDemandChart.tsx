@@ -62,6 +62,30 @@ const SubtleValueLabel = (props: any) => {
   );
 };
 
+// Custom tick: rotates label and shortens "30-Jun-26" → "30 Jun"
+const CustomXAxisTick = ({ x, y, payload }: any) => {
+  if (!payload?.value) return null;
+  const parts = String(payload.value).split('-');
+  const short = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : payload.value;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={4}
+        textAnchor="end"
+        transform="rotate(-35)"
+        fill="#64748b"
+        fontSize={10}
+        fontWeight={500}
+        fontFamily="sans-serif"
+      >
+        {short}
+      </text>
+    </g>
+  );
+};
+
 export const WowDemandChart: React.FC<WowDemandChartProps> = ({
   title,
   subtitle,
@@ -122,12 +146,12 @@ export const WowDemandChart: React.FC<WowDemandChartProps> = ({
         )}
       </div>
 
-      <div className="h-52 w-full flex items-center justify-center">
+      <div className="h-60 w-full flex items-center justify-center">
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart 
               data={displayData} 
-              margin={{ top: 18, right: 15, left: -22, bottom: 0 }}
+              margin={{ top: 18, right: 15, left: -22, bottom: 30 }}
               onClick={handleChartClick}
               className="cursor-pointer"
             >
@@ -142,9 +166,9 @@ export const WowDemandChart: React.FC<WowDemandChartProps> = ({
                 dataKey="week" 
                 axisLine={true} 
                 tickLine={false} 
-                tick={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }} 
                 stroke="#cbd5e1"
-                dy={4}
+                interval={0}
+                tick={<CustomXAxisTick />}
               />
               <YAxis 
                 axisLine={false} 

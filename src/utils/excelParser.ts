@@ -6,6 +6,7 @@ import {
   FilterState,
   WowTrendPoint,
   IntVsExtDistributionData,
+  IntVsExtTrendPoint,
   DepartmentDistributionData
 } from '../types';
 import { 
@@ -327,6 +328,33 @@ export const aggregateIntVsExtDistribution = (records: DemandRecord[]): IntVsExt
     { name: 'Internal', value: Math.round(internalCount), percentage: internalPct, color: '#f97316' },
     { name: 'External', value: Math.round(externalCount), percentage: externalPct, color: '#0284c7' }
   ];
+};
+
+// Internal vs External Week-over-Week Trend Aggregator (Active demand only — excludes Dropped/Filled)
+export const aggregateIntVsExtTrend = (records: DemandRecord[]): IntVsExtTrendPoint[] => {
+  if (!records || records.length === 0) return [];
+
+  const weekMap: Record<string, { internal: number; external: number }> = {};
+
+  records.forEach((r) => {
+    if (!isActiveRecord(r)) return; // active only
+    const week = r.week || '';
+    if (!week) return;
+    if (!weekMap[week]) weekMap[week] = { internal: 0, external: 0 };
+    const pos = r.requiredCount || 1;
+    if (r.internalExternal?.toLowerCase().includes('internal') || r.status?.toLowerCase().includes('bench')) {
+      weekMap[week].internal += pos;
+    } else {
+      weekMap[week].external += pos;
+    }
+  });
+
+  const sortedWeeks = sortWeeksChronologically(Object.keys(weekMap));
+  return sortedWeeks.map((w) => ({
+    week: w,
+    internal: Math.round(weekMap[w].internal),
+    external: Math.round(weekMap[w].external)
+  }));
 };
 
 // Location Distribution Aggregator (Active demand only — excludes Dropped/Filled)
