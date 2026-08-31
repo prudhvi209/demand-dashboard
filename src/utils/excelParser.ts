@@ -12,7 +12,12 @@ import {
 import { 
   sortWeeksChronologically, 
   formatDateToCanonicalWeek, 
-  parseWeekDate 
+  parseWeekDate,
+  toDate,
+  getUniqueMonthlyDemand,
+  createDemandKey,
+  normalizeValue,
+  toNumber
 } from './dateFilterUtils';
 import { 
   normalizeStatus, 
@@ -23,6 +28,8 @@ import {
   isIdentifiedRecord, 
   isHoldRecord 
 } from './statusUtils';
+
+export { getUniqueMonthlyDemand, toDate, createDemandKey, normalizeValue, toNumber };
 
 export interface ParseResult {
   records: DemandRecord[];
@@ -200,15 +207,11 @@ export const filterDemandRecords = (records: DemandRecord[], filters: FilterStat
   if (!records || records.length === 0) return [];
 
   const uniqueWeeks = sortWeeksChronologically(Array.from(new Set(records.map(r => r.week).filter(Boolean) as string[])));
-  const uniqueMonths = Array.from(new Set(records.map(r => r.startMonth).filter(Boolean) as string[]));
-
   const latestWeek = uniqueWeeks[uniqueWeeks.length - 1];
   const previousWeek = uniqueWeeks.length > 1 ? uniqueWeeks[uniqueWeeks.length - 2] : uniqueWeeks[0];
 
-  const latestMonth = uniqueMonths[uniqueMonths.length - 1];
-  const previousMonth = uniqueMonths.length > 1 ? uniqueMonths[uniqueMonths.length - 2] : uniqueMonths[0];
-
-  return records.filter((r) => {
+  // 1. Apply slicers and custom date range
+  const filtered = records.filter((r) => {
     // Slicers
     if (filters.department && filters.department !== 'all') {
       if (r.department?.toLowerCase().trim() !== filters.department.toLowerCase().trim()) return false;
@@ -234,26 +237,27 @@ export const filterDemandRecords = (records: DemandRecord[], filters: FilterStat
       if (r.dateAdded && r.dateAdded > filters.endDate) return false;
     }
 
-    // Relative Period
-    if (filters.period && filters.period !== 'all') {
-      switch (filters.period) {
-        case 'current_week':
-          if (r.week !== latestWeek) return false;
-          break;
-        case 'last_week':
-          if (r.week !== previousWeek) return false;
-          break;
-        case 'current_month':
-          if (r.startMonth !== latestMonth && (!latestMonth || !r.startMonth?.toLowerCase().includes(latestMonth.toLowerCase()))) return false;
-          break;
-        case 'previous_month':
-          if (r.startMonth !== previousMonth && (!previousMonth || !r.startMonth?.toLowerCase().includes(previousMonth.toLowerCase()))) return false;
-          break;
-      }
+    // Single week relative periods
+    if (filters.period === 'current_week') {
+      if (r.week !== latestWeek) return false;
+    }
+    if (filters.period === 'last_week') {
+      if (r.week !== previousWeek) return false;
     }
 
     return true;
   });
+
+  // 2. Apply monthly deduplication if month relative period selected
+  if (filters.period === 'current_month') {
+    return getUniqueMonthlyDemand(filtered, 'current_month');
+  }
+
+  if (filters.period === 'previous_month') {
+    return getUniqueMonthlyDemand(filtered, 'previous_month');
+  }
+
+  return filtered;
 };
 
 // WOW (Week-over-Week) Weekly Trend Series Aggregator
@@ -263,11 +267,11 @@ export const aggregateWowTrends = (records: DemandRecord[]): WowTrendPoint[] => 
   const weekMap: Record<string, { total: number; newPos: number; open: number; filled: number; dropped: number }> = {};
 
   records.forEach((r) => {
-    const week = r.week || '24-Jun-26';
+    const week = r.week || (r as any)['Week'] || '24-Jun-26';
     if (!weekMap[week]) {
       weekMap[week] = { total: 0, newPos: 0, open: 0, filled: 0, dropped: 0 };
     }
-    const pos = r.requiredCount || 1;
+    const pos = r.requiredCount || (r as any)['Positions'] || 1;
     
     // Strict semantic activity check — isActiveRecord now excludes Dropped/Filled by status keyword first
     const isDropped = isDroppedRecord(r);
@@ -312,8 +316,10 @@ export const aggregateIntVsExtDistribution = (records: DemandRecord[]): IntVsExt
   const activeRecords = records.filter(r => isActiveRecord(r));
 
   activeRecords.forEach((r) => {
-    const pos = r.requiredCount || 1;
-    if (r.internalExternal?.toLowerCase().includes('internal') || r.status?.toLowerCase().includes('bench')) {
+    const pos = r.requiredCount || (r as any)['Positions'] || 1;
+    const intExt = (r.internalExternal || (r as any)['Internal / External'] || (r as any)['Internal/External'] || '').toLowerCase();
+    const st = (r.status || (r as any)['Position Status'] || '').toLowerCase();
+    if (intExt.includes('internal') || st.includes('bench')) {
       internalCount += pos;
     } else {
       externalCount += pos;
@@ -338,11 +344,13 @@ export const aggregateIntVsExtTrend = (records: DemandRecord[]): IntVsExtTrendPo
 
   records.forEach((r) => {
     if (!isActiveRecord(r)) return; // active only
-    const week = r.week || '';
+    const week = r.week || (r as any)['Week'] || '';
     if (!week) return;
     if (!weekMap[week]) weekMap[week] = { internal: 0, external: 0 };
-    const pos = r.requiredCount || 1;
-    if (r.internalExternal?.toLowerCase().includes('internal') || r.status?.toLowerCase().includes('bench')) {
+    const pos = r.requiredCount || (r as any)['Positions'] || 1;
+    const intExt = (r.internalExternal || (r as any)['Internal / External'] || (r as any)['Internal/External'] || '').toLowerCase();
+    const st = (r.status || (r as any)['Position Status'] || '').toLowerCase();
+    if (intExt.includes('internal') || st.includes('bench')) {
       weekMap[week].internal += pos;
     } else {
       weekMap[week].external += pos;
@@ -368,9 +376,9 @@ export const aggregateLocationDistribution = (records: DemandRecord[]): { name: 
   const activeRecords = records.filter(r => isActiveRecord(r));
 
   activeRecords.forEach((r) => {
-    const loc = (r.location || 'Offshore').trim();
+    const loc = (r.location || (r as any)['Location'] || 'Offshore').trim();
     const formattedLoc = loc.charAt(0).toUpperCase() + loc.slice(1).toLowerCase();
-    const pos = r.requiredCount || 1;
+    const pos = r.requiredCount || (r as any)['Positions'] || 1;
     locationCounts[formattedLoc] = (locationCounts[formattedLoc] || 0) + pos;
     total += pos;
   });
@@ -399,8 +407,9 @@ export const aggregateClientDistribution = (records: DemandRecord[]): Department
   const activeRecords = records.filter(r => isActiveRecord(r));
 
   activeRecords.forEach((r) => {
-    const client = r.client || r.department || 'Delivery';
-    clientCounts[client] = (clientCounts[client] || 0) + (r.requiredCount || 1);
+    const client = r.client || (r as any)['Client'] || r.department || 'Delivery';
+    const pos = r.requiredCount || (r as any)['Positions'] || 1;
+    clientCounts[client] = (clientCounts[client] || 0) + pos;
   });
 
   const COLORS = ['#2563eb', '#0ea5e9', '#6366f1', '#f43f5e', '#10b981', '#f59e0b'];
@@ -433,6 +442,7 @@ export const aggregateClientDistribution = (records: DemandRecord[]): Department
 
   return top5;
 };
+
 
 // Helper: returns only the records belonging to the latest snapshot week chronologically.
 export const getLatestSnapshotRecords = (records: DemandRecord[]): DemandRecord[] => {
