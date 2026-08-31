@@ -9,7 +9,7 @@ import {
   IntVsExtTrendPoint,
   DepartmentDistributionData 
 } from '../types';
-import { fetchCurrentDataset, saveParsedDatasetToStorage, clearLocalStorageDataset } from '../services/storage';
+import { fetchCurrentDataset, saveParsedDatasetToFirestore, clearLocalStorageDataset } from '../firebase/firestore';
 import { 
   parseExcelFile, 
   filterDemandRecords, 
@@ -22,6 +22,7 @@ import {
   getLatestSnapshotRecords,
   getActiveSnapshotRecords
 } from '../utils/excelParser';
+import { useAuth } from './AuthContext';
 
 interface DataContextType {
   records: DemandRecord[];
@@ -49,8 +50,8 @@ interface DataContextType {
   setFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   resetFilters: () => void;
   loading: boolean;
-  activeTab: 'dashboard' | 'upload';
-  setActiveTab: (tab: 'dashboard' | 'upload') => void;
+  activeTab: 'dashboard' | 'upload' | 'profile';
+  setActiveTab: (tab: 'dashboard' | 'upload' | 'profile') => void;
   isSidebarCollapsed: boolean;
   setIsSidebarCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   toggleSidebar: () => void;
@@ -75,6 +76,7 @@ const INITIAL_FILTERS: FilterState = {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [records, setRecords] = useState<DemandRecord[]>([]);
   const [summary, setSummary] = useState<AnalyticsSummary>({
     currentDemand: 0,
@@ -107,7 +109,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [recentUploads, setRecentUploads] = useState<UploadHistoryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'upload'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'upload' | 'profile'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -194,11 +196,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const processUploadedFile = async (file: File): Promise<{ success: boolean; message?: string }> => {
     try {
-      const uploader = 'Local User';
+      const uploader = user?.displayName || user?.email || 'Analytics Manager';
       const result = await parseExcelFile(file, uploader);
 
-      // Save to local storage
-      await saveParsedDatasetToStorage(result.records, result.uploadHistoryItem);
+      // Save to Firestore and local storage
+      await saveParsedDatasetToFirestore(result.records, result.uploadHistoryItem);
 
       // Reset active filters & update state
       setFilters(INITIAL_FILTERS);
